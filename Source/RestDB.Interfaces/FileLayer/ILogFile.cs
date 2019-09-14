@@ -4,27 +4,13 @@ using System.IO;
 
 namespace RestDB.Interfaces.FileLayer
 {
-    public interface ILogFile
+    public interface ILogFile: IDisposable
     {
         /// <summary>
-        /// Opens a physical disk file as a log file. Must have exclusive access to the file
+        /// Empties this log file deleting all transactions from it
         /// </summary>
-        /// <param name="file">The file to read/write</param>
-        /// <returns>True if the file could be opened</returns>
-        bool Open(FileInfo file);
-
-        /// <summary>
-        /// Creates a new file and initializes it ready for storing a log
-        /// </summary>
-        /// <param name="file">The file to create</param>
-        /// <param name="pageSize">The size of data pages that will be stored in this log file</param>
-        /// <returns>True if the file could be created</returns>
-        bool Create(FileInfo file, int pageSize);
-
-        /// <summary>
-        /// The size of the pages in this file
-        /// </summary>
-        int PageSize { get; }
+        /// <returns></returns>
+        bool Truncate();
 
         /// <summary>
         /// This is called when a transaction completes and has made modifications to the data.
@@ -49,8 +35,10 @@ namespace RestDB.Interfaces.FileLayer
         /// call, then pass the return value on subsequent calls to read the whole log</param>
         /// <param name="status">Returns the status of the log file entry</param>
         /// <param name="versionNumber">Returns the version number of the transaction</param>
+        /// <param name="updateCount">Returns the number of updates in this log entry</param>
+        /// <param name="updateSize">Returns the size of this update in bytes</param>
         /// <returns></returns>
-        long ReadNext(long offset, out LogEntryStatus status, out long versionNumber);
+        long ReadNext(long offset, out LogEntryStatus status, out long versionNumber, out long updateCount, out long updateSize);
 
         /// <summary>
         /// Reads all of the updates for a transaction beginning at the specified offset

@@ -13,21 +13,18 @@ namespace RestDB.Interfaces.FileLayer
     public interface IFileSet
     {
         /// <summary>
-        /// Required to initialize the file set. Note that the PageSize of the
-        /// data file and the log file must match
-        /// </summary>
-        /// <param name="dataFile">The file that holds the data records</param>
-        /// <param name="logFile">The file that holds the log entries</param>
-        void Init(IDataFile dataFile, ILogFile logFile);
-
-        /// <summary>
         /// Returns the page size of data in this file set
         /// </summary>
         int PageSize { get; }
 
         /// <summary>
         /// Call this at startup to recover partially written data and
-        /// fix errors in the data file using the log file
+        /// fix errors in the data file using the log file. When the syatem
+        /// shuts down cleanly a flag is written in the file head that indicates
+        /// this, and the flag is cleared before the first write operation so that
+        /// the files know if they need to be recovered or not. This means that
+        /// you can always call this Recover() method at startup and if no recovery
+        /// is needed the method will return immediately.
         /// </summary>
         void Recover();
 
@@ -40,8 +37,9 @@ namespace RestDB.Interfaces.FileLayer
         /// transaction that made these changes. If the system fails part way through
         /// a write operation either all of the pages with the same version number will be
         /// written to the data file or none of these pages will be written</param>
-        /// <returns>True if the write operation succeeds. Fails only when the
-        /// log file is full or unwritable</returns>
+        /// <returns>True if the write operation succeeds. Fails when the
+        /// log file is full or unwritable, or system shutdown is in progress and
+        /// changes are being flushed to disk</returns>
         bool Write(IPage page, long versionNumber);
 
         /// <summary>
@@ -60,12 +58,15 @@ namespace RestDB.Interfaces.FileLayer
         void EndTransaction(long versionNumber);
 
         /// <summary>
-        /// Tries to read data from the data file
+        /// Tries to read data from the data file. Note that this does not read the log
+        /// file so any pending updates are not returned by this method. It is assumed that
+        /// there is a caching layer above the file set that merges pending writes into read
+        /// operations according to the transaction isolation level.
         /// </summary>
         /// <param name="pageNumber">The page number offset into the file</param>
         /// <param name="data">The buffer to read into. Must be PageSize in length</param>
         /// <returns>True if the read operation succeeded. If false then the data array
-        /// may or may not have been overwritten</returns>
+        /// in the page may or may not have been overwritten</returns>
         bool Read(int pageNumber, byte[] data);
     }
 }

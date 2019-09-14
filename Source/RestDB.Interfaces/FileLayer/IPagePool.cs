@@ -12,10 +12,9 @@ namespace RestDB.Interfaces.FileLayer
     public interface IPagePool
     {
         /// <summary>
-        /// Initializes the page pool
+        /// The size of the pages in this page pool
         /// </summary>
-        /// <param name="pageSize">The size of pages to pool and reuse</param>
-        void Init(int pageSize);
+        int PageSize { get; }
 
         /// <summary>
         /// Gets an available page from the pool and initializes its page number.

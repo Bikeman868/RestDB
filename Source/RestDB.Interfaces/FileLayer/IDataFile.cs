@@ -8,23 +8,8 @@ namespace RestDB.Interfaces.FileLayer
     /// Provides a mechanism for reading and writing to a file
     /// that contains pages of data that are fixed length
     /// </summary>
-    public interface IDataFile
+    public interface IDataFile: IDisposable
     {
-        /// <summary>
-        /// Opens a physical disk file as a data file. Must have exclusive access to the file
-        /// </summary>
-        /// <param name="file">The file to read/write</param>
-        /// <returns>True if the file was opened with read/write access</returns>
-        bool Open(FileInfo file);
-
-        /// <summary>
-        /// Creates a new file and initializes it ready for storing data
-        /// </summary>
-        /// <param name="file">The file to create</param>
-        /// <param name="pageSize">The size of data pages that will be stored in this file</param>
-        /// <returns>True if the file was created</returns>
-        bool Create(FileInfo file, int pageSize);
-
         /// <summary>
         /// The size of the data pages in this file
         /// </summary>

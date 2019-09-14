@@ -7,17 +7,11 @@ namespace RestDB.Interfaces.FileLayer
     /// <summary>
     /// Provides a caching mechanism for pages of data from a single file. 
     /// When pages are modified all prior versions that are referenced are 
-    /// kept so that transactions can have a static view of the data
+    /// kept so that transactions can have a static view of the data for
+    /// transaction isolation.
     /// </summary>
     public interface IVersionedPageCache
     {
-        /// <summary>
-        /// Initializes the cache with a backing store. This backing store
-        /// will be read when there is a cache miss. Page updates are versioned
-        /// to support transactions
-        /// </summary>
-        void Init(IFileSet fileSet);
-
         /// <summary>
         /// Begins a new transaction that will keep track of changes made
         /// </summary>
@@ -25,6 +19,7 @@ namespace RestDB.Interfaces.FileLayer
 
         /// <summary>
         /// Ends the transaction applying all changes to the underlying file system
+        /// and discarding the cached pending writes associated with this transaction
         /// </summary>
         void EndTransaction(ITransaction transaction);
 
