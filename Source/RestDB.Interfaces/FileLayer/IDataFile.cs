@@ -6,7 +6,7 @@ namespace RestDB.Interfaces.FileLayer
 {
     /// <summary>
     /// Provides a mechanism for reading and writing to a file
-    /// that contains blocks of data that are fixed length
+    /// that contains pages of data that are fixed length
     /// </summary>
     public interface IDataFile
     {
@@ -21,29 +21,26 @@ namespace RestDB.Interfaces.FileLayer
         /// Creates a new file and initializes it ready for storing data
         /// </summary>
         /// <param name="file">The file to create</param>
-        /// <param name="blockSize">The size of data blocks that will be stored in this file</param>
+        /// <param name="pageSize">The size of data pages that will be stored in this file</param>
         /// <returns>True if the file was created</returns>
-        bool Create(FileInfo file, Int32 blockSize);
+        bool Create(FileInfo file, int pageSize);
 
         /// <summary>
-        /// The size of the data blocks in this file
+        /// The size of the data pages in this file
         /// </summary>
-        Int32 BlockSize { get; }
+        int PageSize { get; }
 
         /// <summary>
         /// Tries to write data into the file
         /// </summary>
-        /// <param name="blockNumber">The block number offset into the file</param>
-        /// <param name="data">The bytes to write. Must be BlockSize in length</param>
         /// <returns>True if the write operation succeeded</returns>
-        bool Write(Int32 blockNumber, byte[] data);
+        bool Write(IPage page);
 
         /// <summary>
         /// Tries to read data from the file
         /// </summary>
-        /// <param name="blockNumber">The block number offset into the file</param>
-        /// <param name="data">The buffer to read into. Must be BlockSize in length</param>
-        /// <returns>True if the read operation succeeded</returns>
-        bool Read(Int32 blockNumber, byte[] data);
+        /// <returns>True if the read operation succeeded. If false is
+        /// returned then the contents of the page data is undetermined</returns>
+        bool Read(IPage page);
     }
 }
