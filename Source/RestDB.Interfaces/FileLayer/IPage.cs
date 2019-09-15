@@ -12,7 +12,7 @@ namespace RestDB.Interfaces.FileLayer
         /// <summary>
         /// Unique page number within a data file
         /// </summary>
-        long PageNumber { get; set; }
+        ulong PageNumber { get; set; }
 
         /// <summary>
         /// The data from this part of the data file. Length must match

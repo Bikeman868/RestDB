@@ -36,7 +36,7 @@ namespace RestDB.Interfaces.FileLayer
         /// 128+  Application defined</param>
         /// <returns>The first page of data that contains the index of objects
         /// of a particular type</returns>
-        IPage GetFirstIndexPage(short objectType);
+        IPage GetFirstIndexPage(ushort objectType);
 
         /// <summary>
         /// Creates a new page in the page store with a unique page number
@@ -48,7 +48,7 @@ namespace RestDB.Interfaces.FileLayer
         /// could be returned immediately on the next call to 
         /// Allocate()
         /// </summary>
-        void Release(long pageNumber);
+        void Release(ulong pageNumber);
 
         /// <summary>
         /// Provides access to the pages in this page store

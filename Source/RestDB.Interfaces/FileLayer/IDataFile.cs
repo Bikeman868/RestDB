@@ -13,7 +13,7 @@ namespace RestDB.Interfaces.FileLayer
         /// <summary>
         /// The size of the data pages in this file
         /// </summary>
-        int PageSize { get; }
+        uint PageSize { get; }
 
         /// <summary>
         /// Tries to write data into the file

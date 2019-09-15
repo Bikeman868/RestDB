@@ -5,9 +5,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Folder Include="DatabaseLayer\" />
     <Folder Include="StoredProcedureLayer\" />
     <Folder Include="QueryLayer\" />
-    <Folder Include="TableLayer\" />
   </ItemGroup>
 
 </Project>

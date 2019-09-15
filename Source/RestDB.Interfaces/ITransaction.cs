@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace RestDB.Interfaces.FileLayer
+namespace RestDB.Interfaces
 {
     /// <summary>
     /// This is used internally to track information related to a transaction context

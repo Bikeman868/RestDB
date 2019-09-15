@@ -18,7 +18,7 @@ namespace RestDB.Interfaces.FileLayer
         /// <param name="versionNumber">The version number of the transaction that made the changes</param>
         /// <param name="updates">The changes that were made</param>
         /// <returns>The offset into the log file of this log file entry</returns>
-        long Write(long versionNumber, IEnumerable<PageUpdate> updates);
+        ulong Write(ulong versionNumber, IEnumerable<PageUpdate> updates);
 
         /// <summary>
         /// This is called when all of the changes for a given transaction have been
@@ -26,7 +26,7 @@ namespace RestDB.Interfaces.FileLayer
         /// needed to roll the database forward when restarting after a crash.
         /// </summary>
         /// <param name="offset">You obtain this offset by calling the Write() method</param>
-        void Committed(long offset);
+        void Committed(ulong offset);
 
         /// <summary>
         /// Skips to the next log file entry and reads the header only
@@ -38,13 +38,13 @@ namespace RestDB.Interfaces.FileLayer
         /// <param name="updateCount">Returns the number of updates in this log entry</param>
         /// <param name="updateSize">Returns the size of this update in bytes</param>
         /// <returns></returns>
-        long ReadNext(long offset, out LogEntryStatus status, out long versionNumber, out long updateCount, out long updateSize);
+        ulong ReadNext(ulong offset, out LogEntryStatus status, out ulong versionNumber, out ulong updateCount, out ulong updateSize);
 
         /// <summary>
         /// Reads all of the updates for a transaction beginning at the specified offset
         /// </summary>
         /// <param name="offset">The start offset of the transaction in the log</param>
         /// <returns>A list of the data file updates for this version/transaction</returns>
-        List<PageUpdate> GetUpdates(long offset);
+        List<PageUpdate> GetUpdates(ulong offset);
     }
 }

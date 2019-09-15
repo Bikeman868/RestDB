@@ -30,7 +30,7 @@ namespace RestDB.Interfaces.FileLayer
         /// </summary>
         /// <param name="pageNumber">The page number to return</param>
         /// <param name="transaction">The transaction context</param>
-        IPage Get(int pageNumber, ITransaction transaction);
+        IPage Get(uint pageNumber, ITransaction transaction);
 
         /// <summary>
         /// Updates the cache with a replacement page at a specific version number

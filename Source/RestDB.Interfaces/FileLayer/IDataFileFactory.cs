@@ -22,6 +22,6 @@ namespace RestDB.Interfaces.FileLayer
         /// <param name="file">The file to create</param>
         /// <param name="pageSize">The size of data pages that will be stored in this file</param>
         /// <returns>True if the file was created</returns>
-        IDataFile Create(FileInfo file, int pageSize);
+        IDataFile Create(FileInfo file, uint pageSize);
     }
 }

@@ -22,6 +22,6 @@ namespace RestDB.Interfaces.FileLayer
         /// </summary>
         /// <param name="pageNumber">Initializes the page number property of the page</param>
         /// <param name="clear">Page true to zero the data in the page</param>
-        IPage Get(long pageNumber, bool clear = false);
+        IPage Get(ulong pageNumber, bool clear = false);
     }
 }

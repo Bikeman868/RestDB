@@ -13,12 +13,12 @@ namespace RestDB.Interfaces.FileLayer
         /// <summary>
         /// The page number of the page to change
         /// </summary>
-        public long PageNumber;
+        public ulong PageNumber;
 
         /// <summary>
         /// The byte offset into the page where the modification starts
         /// </summary>
-        public int Offset;
+        public uint Offset;
 
         /// <summary>
         /// The bytes of data to write into the page

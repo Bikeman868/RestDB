@@ -14,6 +14,6 @@ namespace RestDB.Interfaces.FileLayer
         /// appropriate PageSize
         /// </summary>
         /// <param name="pageSize">The size of pages to pool and reuse</param>
-        IPagePool Create(int pageSize);
+        IPagePool Create(uint pageSize);
     }
 }

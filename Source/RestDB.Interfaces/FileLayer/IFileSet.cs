@@ -15,7 +15,7 @@ namespace RestDB.Interfaces.FileLayer
         /// <summary>
         /// Returns the page size of data in this file set
         /// </summary>
-        int PageSize { get; }
+        uint PageSize { get; }
 
         /// <summary>
         /// Call this at startup to recover partially written data and
@@ -40,7 +40,7 @@ namespace RestDB.Interfaces.FileLayer
         /// <returns>True if the write operation succeeds. Fails when the
         /// log file is full or unwritable, or system shutdown is in progress and
         /// changes are being flushed to disk</returns>
-        bool Write(IPage page, long versionNumber);
+        bool Write(IPage page, ulong versionNumber);
 
         /// <summary>
         /// Tells the file set that there are no more pages to write for a
@@ -55,7 +55,7 @@ namespace RestDB.Interfaces.FileLayer
         /// </summary>
         /// <param name="versionNumber">The version number of the transaction that
         /// has finished writing changes</param>
-        void EndTransaction(long versionNumber);
+        void EndTransaction(ulong versionNumber);
 
         /// <summary>
         /// Tries to read data from the data file. Note that this does not read the log
