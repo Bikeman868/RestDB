@@ -25,9 +25,9 @@ namespace RestDB.Interfaces.TableLayer
         /// <summary>
         /// The values of the fields in this row. The indexes of this
         /// array always corrspond to the Columns array and these two arrays
-        /// are always the same lenth. The objects in this array are structs
-        /// or strings with the same type as defined by the data type of the
-        /// column definition.
+        /// are always the same lenth. The objects in this array are structs,
+        /// arrays or strings with the same type as defined by the data type 
+        /// of the column definition.
         /// </summary>
         Object[] Fields { get; }
     }

@@ -19,7 +19,7 @@ namespace RestDB.Interfaces.FileLayer
         Failed,
 
         /// <summary>
-        /// The data was written to the log file and the data file. No fixup is needed.
+        /// The data was written to the log file and the data file. No recovery is needed.
         /// </summary>
         Completed
     }

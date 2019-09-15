@@ -9,5 +9,16 @@ namespace RestDB.Interfaces
     /// </summary>
     public interface ITransaction
     {
+        /// <summary>
+        /// The database version that as current when this transaction started
+        /// </summary>
+        ulong BeginVersionNumber { get; }
+
+        /// <summary>
+        /// The version number that was allocated to this transaction when it was
+        /// committed. Before the transaction commits this has the same value as 
+        /// the BeginVersionNumber property
+        /// </summary>
+        ulong CommitVersionNumber { get; }
     }
 }

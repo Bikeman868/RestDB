@@ -15,10 +15,19 @@ namespace RestDB.Interfaces.FileLayer
         /// <summary>
         /// This is called when a transaction completes and has made modifications to the data.
         /// </summary>
-        /// <param name="versionNumber">The version number of the transaction that made the changes</param>
+        /// <param name="transaction">The transaction that made the changes</param>
         /// <param name="updates">The changes that were made</param>
         /// <returns>The offset into the log file of this log file entry</returns>
-        ulong Write(ulong versionNumber, IEnumerable<PageUpdate> updates);
+        ulong CommitStart(ITransaction transaction, IEnumerable<PageUpdate> updates);
+
+        /// <summary>
+        /// This is called when all of the changes for a given transaction have been
+        /// successfully written to the log files of all of the tables. At this point
+        /// all of the changes to the database have been captured in log files so this
+        /// transaction can be rolled forward after a system crash.
+        /// </summary>
+        /// <param name="offset">You obtain this offset by calling the CommitStart() method</param>
+        void CommitComplete(ulong offset);
 
         /// <summary>
         /// This is called when all of the changes for a given transaction have been
@@ -26,7 +35,7 @@ namespace RestDB.Interfaces.FileLayer
         /// needed to roll the database forward when restarting after a crash.
         /// </summary>
         /// <param name="offset">You obtain this offset by calling the Write() method</param>
-        void Committed(ulong offset);
+        void CommitApplied(ulong offset);
 
         /// <summary>
         /// Skips to the next log file entry and reads the header only
@@ -38,7 +47,12 @@ namespace RestDB.Interfaces.FileLayer
         /// <param name="updateCount">Returns the number of updates in this log entry</param>
         /// <param name="updateSize">Returns the size of this update in bytes</param>
         /// <returns></returns>
-        ulong ReadNext(ulong offset, out LogEntryStatus status, out ulong versionNumber, out ulong updateCount, out ulong updateSize);
+        ulong ReadNext(
+            ulong offset, 
+            out LogEntryStatus status, 
+            out ulong versionNumber, 
+            out ulong updateCount, 
+            out ulong updateSize);
 
         /// <summary>
         /// Reads all of the updates for a transaction beginning at the specified offset

@@ -12,7 +12,7 @@ namespace RestDB.Interfaces.TableLayer
         IColumnDefinition Definition { get; }
 
         /// <summary>
-        /// Returns the bytes offset into the row data buffer where this
+        /// Returns the byte offset into the row data buffer where this
         /// column data resides
         /// </summary>
         ushort Offset { get; }

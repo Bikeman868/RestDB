@@ -12,8 +12,18 @@ namespace RestDB.Interfaces.TableLayer
     /// all of their data in a single file set so that write operations on
     /// the table can not be partially completed.
     /// </summary>
-    public interface ITable
+    public interface ITable: ISearchable
     {
+        /// <summary>
+        /// The name that can be used to refer to this table in query languages
+        /// </summary>
+        string Name { get; }
+
+        /// <summary>
+        /// The page store where this table is persisted
+        /// </summary>
+        IPageStore PageStore { get;}
+
         /// <summary>
         /// The number of rows of data in the able. Each row contains the
         /// same column schema.
@@ -26,7 +36,7 @@ namespace RestDB.Interfaces.TableLayer
         ulong ColumnCount { get; }
 
         /// <summary>
-        /// Returns the table schema as a collection of column definitions
+        /// Returns the table column schema as a collection of column definitions
         /// </summary>
         IColumnDefinition[] GetColumnDefinitions();
 
@@ -51,6 +61,21 @@ namespace RestDB.Interfaces.TableLayer
         /// </summary>
         void ReplaceColumn(IColumnDefinition existingColumn, IColumnDefinition newColumn);
 
+        /// <summary>
+        /// Returns the indexes that are defined on this table
+        /// </summary>
+        IIndex[] GetIndexes();
+
+        /// <summary>
+        /// Adds a new index to this table
+        /// </summary>
+        IIndex AddIndex(IIndexDefinition index);
+
+        /// <summary>
+        /// Deletes an index from this table
+        /// </summary>
+        void DeleteIndex(IIndexDefinition index);
+        
         /// <summary>
         /// Adds a new row to the table. Deleted rows will be reused. If there are no
         /// deleted rows then a new row is added to the end of the table
@@ -100,22 +125,5 @@ namespace RestDB.Interfaces.TableLayer
         /// Deletes all of the data in the table
         /// </summary>
         void Truncate();
-
-        /// <summary>
-        /// Returns an enumerator for all of the rows in the table
-        /// </summary>
-        IEnumerable<IRow> EnumerateRows(ITransaction transaction);
-
-        /// <summary>
-        /// Enumerates all of the rows for the specified column. Tables that are stored
-        /// in column order will execute this much more efficiently. Row based tables also
-        /// provide this facility but it is much less efficient in that case.
-        /// </summary>
-        /// <typeparam name="T">The type of data to return</typeparam>
-        /// <param name="column">Defines the column to return. The column knows how to 
-        /// convert it's physical representation into various struct types</param>
-        /// <param name="predicate">Optional row filter. Supplying this makes column
-        /// based tables very inefficient but does not impact performance of row based tables</param>
-        IEnumerable<T> EnumerateColumn<T>(ITransaction transaction, IColumnDefinition column, Func<IRow> predicate = null);
     }
 }
