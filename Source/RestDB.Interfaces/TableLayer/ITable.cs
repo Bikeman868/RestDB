@@ -36,6 +36,14 @@ namespace RestDB.Interfaces.TableLayer
         ulong ColumnCount { get; }
 
         /// <summary>
+        /// Deletes all data in this table and all indexes from the
+        /// backing file set. This should only be called from the 
+        /// IDatabase implementation after the table has been removed
+        /// from the database itself.
+        /// </summary>
+        void Delete();
+
+        /// <summary>
         /// Returns the table column schema as a collection of column definitions
         /// </summary>
         IColumnDefinition[] GetColumnDefinitions();
