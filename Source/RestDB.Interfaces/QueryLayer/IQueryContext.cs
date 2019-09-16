@@ -5,8 +5,9 @@ namespace RestDB.Interfaces.QueryLayer
     public interface IQueryContext
     {
         ITransaction Transaction { get; }
-        object FieldValue(string fieldName);
-        object FieldValue(string qualifier, string fieldName);
         ITableDictionary Table { get; }
+        T FieldValue<T>(string fieldName);
+        T FieldValue<T>(string qualifier, string fieldName);
+        T Variable<T>(string name);
     }
 }

@@ -24,15 +24,17 @@ namespace RestDB.Interfaces.QueryLayer
 
     public interface IStatementBuilder<T>
     {
+        IStatementListBuilder<T> Begin();
+        ITransactionBuilder<T> BeginTransaction();
         IForBuilder<T> BeginFor(string rowsetName, Func<IQueryContext, IEnumerable<IRow>> rowsetFunc);
         ISelectBuilder<T> BeginSelect();
-
         IIfExpressionBuilder<T> BeginIf();
         IWhileExpressionBuilder<T> BeginWhile();
 
         T Delete(string name);
-
-        IStatementListBuilder<T> Begin();
+        T Assign(string name, Func<IQueryContext, object> value);
+        T Break();
+        T Continue();
     }
 
     public interface IForBuilder<T>: IStatementBuilder<IForBuilder<T>>
@@ -40,9 +42,16 @@ namespace RestDB.Interfaces.QueryLayer
         T EndFor();
     }
 
+    public interface ITransactionBuilder<T> : IStatementBuilder<ITransactionBuilder<T>>
+    {
+        T Commit();
+        T Rollback();
+    }
+
     public interface ISelectBuilder<T>: IExpressionBuilder<ISelectBuilder<T>>
     {
         ISelectBuilder<T> Record(string name);
+        ISelectBuilder<T> Alias(string name);
         T EndSelect();
     }
 
@@ -93,8 +102,9 @@ namespace RestDB.Examples
             IQueryBuilder builder = null;
 
             var query = builder
-                // Return all customers that have 'fred' as a rep using the 'customer_rep' index
+                // Return the first 10 customers that have 'fred' as a rep using the 'customer_rep' index
                 .Begin()
+                    .Assign("count", q => 0)
                     .BeginFor("customer", q =>
                         {
                             var customers = q.Table["customers"];
@@ -102,27 +112,32 @@ namespace RestDB.Examples
                             var matchRep = cq.Create(index.Definition.Columns[0].Column, CompareOperation.Equal, "fred");
                             return index.MatchingRows(q.Transaction, new[] { matchRep });
                         })
+                        .BeginIf().Compare(q => q.Variable<int>("count"), CompareOperation.Equal, q => 10).Break()
+                        .Assign("count", q => q.Variable<int>("count") + 1)
                         .BeginSelect()
-                            .Record("customer")
-                            .Field("name")
+                            .Field("customerId").Alias("id")
+                            .Field("name").Alias("customerName")
                         .EndSelect()
                     .EndFor()
                 .End()
 
                 // Delete users created in the last 7 days whose first name is 'martin' and who are under 18
-                .BeginFor("user", q => 
-                    {
-                        var users = q.Table["users"];
-                        var isNewMatch = cq.Create(users.Column["created"], CompareOperation.Greater, DateTime.UtcNow.AddDays(-7));
-                        return users.MatchingRows(q.Transaction, new[] { isNewMatch });
-                    })
-                    .BeginIf()
-                        .BeginAnd()
-                            .Compare(q => q.FieldValue("firstName"), CompareOperation.Similar, q => "martin")
-                            .Compare(q => q.FieldValue("age"), CompareOperation.Less, q => 18)
-                        .EndAnd()
-                        .Delete("user")
-                .EndFor()
+                .BeginTransaction()
+                    .BeginFor("user", q => 
+                        {
+                            var users = q.Table["users"];
+                            var isNewMatch = cq.Create(users.Column["created"], CompareOperation.Greater, DateTime.UtcNow.AddDays(-7));
+                            return users.MatchingRows(q.Transaction, new[] { isNewMatch });
+                        })
+                        .BeginIf()
+                            .BeginAnd()
+                                .Compare(q => q.FieldValue<string>("firstName"), CompareOperation.Similar, q => "martin")
+                                .Compare(q => q.FieldValue<int>("age"), CompareOperation.Less, q => 18)
+                            .EndAnd()
+                            .Delete("user")
+                    .EndFor()
+                .Commit()
+
                 .Build();
         }
     }
