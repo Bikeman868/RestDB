@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace RestDB.Interfaces.FileLayer
+﻿namespace RestDB.Interfaces.FileLayer
 {
     /// <summary>
     /// POCO class that is used to capture a range of bytes that were modified on a page

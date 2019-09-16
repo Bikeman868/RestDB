@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
 
 namespace RestDB.Interfaces.FileLayer
 {
@@ -8,7 +6,7 @@ namespace RestDB.Interfaces.FileLayer
     /// Provides a mechanism for reading and writing to a file
     /// that contains pages of data that are fixed length
     /// </summary>
-    public interface IDataFile: IDisposable
+    public interface IDataFile : IDisposable
     {
         /// <summary>
         /// The size of the data pages in this file

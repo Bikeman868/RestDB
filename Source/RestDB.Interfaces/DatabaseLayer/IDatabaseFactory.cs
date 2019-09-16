@@ -1,9 +1,4 @@
 ﻿using RestDB.Interfaces.FileLayer;
-using RestDB.Interfaces.StoredProcedureLayer;
-using RestDB.Interfaces.TableLayer;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace RestDB.Interfaces.DatabaseLayer
 {

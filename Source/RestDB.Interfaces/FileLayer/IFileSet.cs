@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace RestDB.Interfaces.FileLayer
+﻿namespace RestDB.Interfaces.FileLayer
 {
     /// <summary>
     /// Encapsulates a pair of files that together provide recoverable write operations.

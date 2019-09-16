@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace RestDB.Interfaces.TableLayer
+﻿namespace RestDB.Interfaces.TableLayer
 {
-    public interface IIndex: ISearchable
+    public interface IIndex : ISearchable
     {
         /// <summary>
         /// Defines the columns that are indexed and other index characteristics

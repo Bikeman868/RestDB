@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace RestDB.Interfaces.FileLayer
+﻿namespace RestDB.Interfaces.FileLayer
 {
     /// <summary>
     /// Encapsulates a page of data that can be read/written to a data file

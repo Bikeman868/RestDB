@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace RestDB.Interfaces.TableLayer
+﻿namespace RestDB.Interfaces.TableLayer
 {
     public interface IColumnQuery
     {

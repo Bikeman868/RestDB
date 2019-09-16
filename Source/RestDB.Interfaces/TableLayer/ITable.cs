@@ -1,7 +1,5 @@
 ﻿using RestDB.Interfaces.FileLayer;
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace RestDB.Interfaces.TableLayer
 {
@@ -12,7 +10,7 @@ namespace RestDB.Interfaces.TableLayer
     /// all of their data in a single file set so that write operations on
     /// the table can not be partially completed.
     /// </summary>
-    public interface ITable: ISearchable
+    public interface ITable : ISearchable
     {
         /// <summary>
         /// The name that can be used to refer to this table in query languages
@@ -22,7 +20,7 @@ namespace RestDB.Interfaces.TableLayer
         /// <summary>
         /// The page store where this table is persisted
         /// </summary>
-        IPageStore PageStore { get;}
+        IPageStore PageStore { get; }
 
         /// <summary>
         /// The number of rows of data in the able. Each row contains the
@@ -93,7 +91,7 @@ namespace RestDB.Interfaces.TableLayer
         /// Deletes an index from this table
         /// </summary>
         void DeleteIndex(IIndexDefinition index);
-        
+
         /// <summary>
         /// Adds a new row to the table. Deleted rows will be reused. If there are no
         /// deleted rows then a new row is added to the end of the table

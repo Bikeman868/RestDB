@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace RestDB.Interfaces.FileLayer
+﻿namespace RestDB.Interfaces.FileLayer
 {
     /// <summary>
     /// Provides resilient versioned persistent storage of pages of

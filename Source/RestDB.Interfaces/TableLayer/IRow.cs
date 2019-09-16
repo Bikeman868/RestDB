@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace RestDB.Interfaces.TableLayer
+﻿namespace RestDB.Interfaces.TableLayer
 {
     /// <summary>
     /// Represents a row of data in a table
@@ -29,6 +25,6 @@ namespace RestDB.Interfaces.TableLayer
         /// arrays or strings with the same type as defined by the data type 
         /// of the column definition.
         /// </summary>
-        Object[] Fields { get; }
+        object[] Fields { get; }
     }
 }

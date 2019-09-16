@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 
 namespace RestDB.Interfaces.FileLayer
 {
-    public interface ILogFile: IDisposable
+    public interface ILogFile : IDisposable
     {
         /// <summary>
         /// Empties this log file deleting all transactions from it
@@ -48,10 +47,10 @@ namespace RestDB.Interfaces.FileLayer
         /// <param name="updateSize">Returns the size of this update in bytes</param>
         /// <returns></returns>
         ulong ReadNext(
-            ulong offset, 
-            out LogEntryStatus status, 
-            out ulong versionNumber, 
-            out ulong updateCount, 
+            ulong offset,
+            out LogEntryStatus status,
+            out ulong versionNumber,
+            out ulong updateCount,
             out ulong updateSize);
 
         /// <summary>

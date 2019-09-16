@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace RestDB.Interfaces.TableLayer
 {
@@ -26,9 +24,9 @@ namespace RestDB.Interfaces.TableLayer
         /// is provided the column is not stored in the database, but calculated
         /// from the other columns in the table</param>
         IColumnDefinition Create(
-            string name, 
-            IDataType dataType, 
-            ushort maxLength = 1, 
+            string name,
+            IDataType dataType,
+            ushort maxLength = 1,
             object defaultValue = null,
             Func<object, bool> validationFunc = null,
             Func<IRow, object> calcFunc = null);
