@@ -19,6 +19,6 @@ namespace RestDB.Interfaces
         /// committed. Before the transaction commits this has the same value as 
         /// the BeginVersionNumber property
         /// </summary>
-        ulong CommitVersionNumber { get; }
+        ulong CommitVersionNumber { get; set; }
     }
 }

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace RestDB.Interfaces.TableLayer
+namespace RestDB.Interfaces
 {
     [Flags]
     public enum CompareOperation

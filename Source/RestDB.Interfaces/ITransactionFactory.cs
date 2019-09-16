@@ -1,4 +1,5 @@
-﻿using System;
+﻿using RestDB.Interfaces.DatabaseLayer;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -10,6 +11,6 @@ namespace RestDB.Interfaces
         /// Returns a transaction object that can be used to provide
         /// isolation between concurrent operations on the database
         /// </summary>
-        ITransaction Create();
+        ITransaction Create(IDatabase database);
     }
 }

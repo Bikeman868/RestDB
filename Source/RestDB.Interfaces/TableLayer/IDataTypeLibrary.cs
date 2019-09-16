@@ -21,21 +21,21 @@ namespace RestDB.Interfaces.TableLayer
         IDataType BuiltInType(string name, short maxLength);
 
         /// <summary>
-        /// Returns an application specific type from its name
+        /// Adds a database specific type
         /// </summary>
-        void RegisterCustomType(string name, string applicationName, IDataType dataType);
+        void RegisterCustomType(string name, string databaseName, IDataType dataType);
 
         /// <summary>
-        /// Returns an application specific type from its name
+        /// Returns a database specific type from its name
         /// </summary>
-        IDataType CustomType(string name, string applicationName);
+        IDataType CustomType(string name, string databaseName);
 
         /// <summary>
         /// Returns a list of all data types available within an application
         /// </summary>
-        /// <param name="applicationName">If you pass a non-existant application name 
+        /// <param name="databaseName">If you pass a non-existant application name 
         /// then only built-in types are returned</param>
         /// <returns></returns>
-        IDataType[] AllTypes(string applicationName = null);
+        IDataType[] AllTypes(string databaseName = null);
     }
 }

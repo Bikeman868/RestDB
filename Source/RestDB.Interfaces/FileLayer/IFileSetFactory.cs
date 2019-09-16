@@ -10,11 +10,11 @@ namespace RestDB.Interfaces.FileLayer
     public interface IFileSetFactory
     {
         /// <summary>
-        /// Required to initialize the file set. Note that the PageSize of the
-        /// data file and the log file must match
+        /// Opens a pair of files that contain the data and log information
+        /// for a page store
         /// </summary>
         /// <param name="dataFile">The file that holds the data records</param>
-        /// <param name="logFile">The file that holds the log entries</param>
-        IFileSet Create(IDataFile dataFile, ILogFile logFile);
+        /// <param name="logFile">The file that holds the transaction log</param>
+        IFileSet Open(IDataFile dataFile, ILogFile logFile);
     }
 }

@@ -1,9 +1,6 @@
 ﻿using RestDB.Interfaces.FileLayer;
 using RestDB.Interfaces.StoredProcedureLayer;
 using RestDB.Interfaces.TableLayer;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace RestDB.Interfaces.DatabaseLayer
 {
@@ -12,7 +9,14 @@ namespace RestDB.Interfaces.DatabaseLayer
         /// <summary>
         /// The name that can be used to refer to this database in query languages
         /// </summary>
-        string Name { get; }
+        string Name { get; set; }
+
+        /// <summary>
+        /// Waits for all pending transactions to be committed or rolled back
+        /// then flushes all updates to the database files and closes those files.
+        /// After closing the database no new transactions can be started.
+        /// </summary>
+        void Close();
 
         /// <summary>
         /// Returns a list of page stores that contain all of the 
@@ -27,7 +31,7 @@ namespace RestDB.Interfaces.DatabaseLayer
         /// <summary>
         /// Returns a list of the user defined types in this database.
         /// </summary>
-        IDataType[] UserDefinedTypes { get; }
+        IDataType[] DataTypes { get; }
 
         /// <summary>
         /// Returns the tables in this database
@@ -45,6 +49,11 @@ namespace RestDB.Interfaces.DatabaseLayer
         IJob[] Jobs { get; }
 
         /// <summary>
+        /// Retieve tables by name
+        /// </summary>
+        ITableDictionary Table { get; }
+
+        /// <summary>
         /// Adds a new page store to the database making it available to 
         /// store objects within this database.
         /// </summary>
@@ -56,6 +65,18 @@ namespace RestDB.Interfaces.DatabaseLayer
         /// procedures etc that are contained in this page store.
         /// </summary>
         void DeletePageStore(IPageStore pageStore);
+
+        /// <summary>
+        /// Adds a custom data type to this database.
+        /// </summary>
+        void AddDataType(IDataType dataType);
+
+        /// <summary>
+        /// Removes this data type from the database. You should only
+        /// do this if there are no tables that have columns that reference
+        /// this data type.
+        /// </summary>
+        void DeleteDataType(IDataType dataType);
 
         /// <summary>
         /// Adds a table to this database. You can use the ITableFactory
@@ -71,6 +92,28 @@ namespace RestDB.Interfaces.DatabaseLayer
         /// data too.
         /// </summary>
         void DeleteTable(ITable table);
+
+        /// <summary>
+        /// Adds a procedure to this database. The procedure name must be
+        /// unique within this database
+        /// </summary>
+        void AddProcedure(IProcedure procedure);
+
+        /// <summary>
+        /// Removes this procedure from the database.
+        /// </summary>
+        void DeleteProcedure(IProcedure procedure);
+
+        /// <summary>
+        /// Adds a procedure to this database. The procedure name must be
+        /// unique within this database
+        /// </summary>
+        void AddJob(IJob job);
+
+        /// <summary>
+        /// Removes this job from the database.
+        /// </summary>
+        void DeleteJob(IJob job);
 
         /// <summary>
         /// Increments the version number of the database and returns

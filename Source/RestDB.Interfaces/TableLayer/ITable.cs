@@ -49,6 +49,11 @@ namespace RestDB.Interfaces.TableLayer
         IColumnDefinition[] GetColumnDefinitions();
 
         /// <summary>
+        /// Retieve indexes by name
+        /// </summary>
+        IColumnDictionary Column { get; }
+
+        /// <summary>
         /// Adds a new column to the end of the table schema and sets the
         /// default value for this column into every row in the table
         /// </summary>
@@ -73,6 +78,11 @@ namespace RestDB.Interfaces.TableLayer
         /// Returns the indexes that are defined on this table
         /// </summary>
         IIndex[] GetIndexes();
+
+        /// <summary>
+        /// Retieve indexes by name
+        /// </summary>
+        IIndexDictionary Index { get; }
 
         /// <summary>
         /// Adds a new index to this table
