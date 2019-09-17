@@ -24,13 +24,13 @@ namespace RestDB.Interfaces.QueryLayer
     {
         IStatementListBuilder<T> Begin();
         ITransactionBuilder<T> BeginTransaction();
-        IForBuilder<T> BeginFor(string rowsetName, Func<IQueryContext, IEnumerable<IRow>> rowsetFunc);
-        ISelectBuilder<T> BeginSelect();
+        IRowsetBuilder<IForBuilder<T>> BeginFor(string rowName);
+        IExpressionListBuilder<T> BeginSelect();
         IIfExpressionBuilder<T> BeginIf();
         IWhileExpressionBuilder<T> BeginWhile();
 
-        T Delete(string name);
-        T Assign(string name, Func<IQueryContext, object> value);
+        T Delete(string rowName);
+        T Assign(string variableName, Func<IQueryContext, object> value);
         T Break();
         T Continue();
     }
@@ -46,10 +46,10 @@ namespace RestDB.Interfaces.QueryLayer
         T Rollback();
     }
 
-    public interface ISelectBuilder<T> : IExpressionBuilder<ISelectBuilder<T>>
+    public interface IExpressionListBuilder<T> : IExpressionBuilder<IExpressionListBuilder<T>>
     {
-        ISelectBuilder<T> Record(string name);
-        ISelectBuilder<T> Alias(string name);
+        IExpressionListBuilder<T> Record(string name);
+        IExpressionListBuilder<T> Alias(string name);
         T EndSelect();
     }
 
@@ -69,6 +69,26 @@ namespace RestDB.Interfaces.QueryLayer
         T Field(string rowsetName, string name);
     }
 
+    public interface IRowsetBuilder<T>
+    {
+        IRowsetBuilder<T> Limit(uint maxRecords);
+        IRowsetBuilder<T> OrderBy(string fieldName);
+        IRowsetBuilder<T> Ascending();
+        IRowsetBuilder<T> Descending();
+        T Function(Func<IQueryContext, IEnumerable<IRow>> rowsetFunc);
+        T TableScan(string tableName);
+        T IndexScan(string tableName, string indexName);
+        T TableQuery(string tableName, Func<IQueryContext, IColumnQuery[]> columnValuesFunc);
+        T IndexQuery(string tableName, string indexName, Func<IQueryContext, IColumnQuery[]> columnValuesFunc);
+        IFilterBuilder<T> TableWhere(string tableName);
+        IFilterBuilder<T> IndexWhere(string tableName, string indexName);
+    }
+
+    public interface IFilterBuilder<T>
+    {
+        IFilterBuilder<T> Column(Func<IQueryContext, IColumnQuery> columnQueryFunc);
+        T EndWhere();
+    }
 
     public interface IIfExpressionBuilder<T> : IBooleanExpressionBuilder<IStatementBuilder<T>>
     {
@@ -104,40 +124,51 @@ namespace RestDB.Examples
             var query = builder
                 // Return the first 10 customers that have 'fred' as a rep using the 'customer_rep' index
                 .Begin()
-                .Assign("count", q => 0)
-                .BeginFor("customer", q =>
-                {
-                    var customers = q.Table["customers"];
-                    var index = customers.Index["customer_rep"];
-                    var matchRep = cq.Create(index.Definition.Columns[0].Column, CompareOperation.Equal, "fred");
-                    return index.MatchingRows(q.Transaction, new[] {matchRep});
-                })
-                .BeginIf().Compare(q => q.Variable<int>("count"), CompareOperation.Equal, q => 10).Break()
-                .Assign("count", q => q.Variable<int>("count") + 1)
-                .BeginSelect()
-                .Field("customerId").Alias("id")
-                .Field("name").Alias("customerName")
-                .EndSelect()
-                .EndFor()
+                    .Assign("count", q => 0)
+                    .BeginFor("customer")
+                        .OrderBy("customerId").Ascending()
+                        .Limit(10)
+                        .IndexWhere("customers", "customer_rep")
+                            .Column(q => cq.Create(q.Table["customers"].Index["customer_rep"].Definition.Columns[0].Column, CompareOperation.Equal, "fred"))
+                        .EndWhere()
+                        .BeginIf().Compare(q => q.Variable<int>("count"), CompareOperation.Equal, q => 10).Break()
+                        .Assign("count", q => q.Variable<int>("count") + 1)
+                        .BeginSelect()
+                            .Field("customerId").Alias("id")
+                            .Field("name").Alias("customerName")
+                        .EndSelect()
+                    .EndFor()
                 .End()
 
+                // Build the query
+                .Build();
+        }
+
+        private void Example2()
+        {
+            IColumnQueryFactory cq = null;
+            IQueryBuilder builder = null;
+
+            var query = builder
                 // Delete users created in the last 7 days whose first name is 'martin' and who are under 18
                 .BeginTransaction()
-                .BeginFor("user", q =>
-                {
-                    var users = q.Table["users"];
-                    var isNewMatch = cq.Create(users.Column["created"], CompareOperation.Greater,
-                        DateTime.UtcNow.AddDays(-7));
-                    return users.MatchingRows(q.Transaction, new[] {isNewMatch});
-                })
-                .BeginIf()
-                .BeginAnd()
-                .Compare(q => q.FieldValue<string>("firstName"), CompareOperation.Similar, q => "martin")
-                .Compare(q => q.FieldValue<int>("age"), CompareOperation.Less, q => 18)
-                .EndAnd()
-                .Delete("user")
-                .EndFor()
+                    .BeginFor("user")
+                        .Function(q =>
+                        {
+                            var users = q.Table["users"];
+                            var isNewMatch = cq.Create(users.Column["created"], CompareOperation.Greater, DateTime.UtcNow.AddDays(-7));
+                            return users.MatchingRows(q.Transaction, new[] { isNewMatch });
+                        })
+                        .BeginIf()
+                            .BeginAnd()
+                                .Compare(q => q.FieldValue<string>("firstName"), CompareOperation.Similar, q => "martin")
+                                .Compare(q => q.FieldValue<int>("age"), CompareOperation.Less, q => 18)
+                            .EndAnd()
+                            .Delete("user")
+                    .EndFor()
                 .Commit()
+
+                // Build the query
                 .Build();
         }
     }

@@ -8,6 +8,6 @@ namespace RestDB.Interfaces.QueryLayer
         ITableDictionary Table { get; }
         T FieldValue<T>(string fieldName);
         T FieldValue<T>(string qualifier, string fieldName);
-        T Variable<T>(string name);
+        T Variable<T>(string variableName);
     }
 }
