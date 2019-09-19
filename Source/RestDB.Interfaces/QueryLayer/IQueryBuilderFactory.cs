@@ -2,7 +2,7 @@
 
 namespace RestDB.Interfaces.QueryLayer
 {
-    public interface IBuilderFactory
+    public interface IQueryBuilderFactory
     {
         /// <summary>
         /// Constructs a new query compiler. The compiler provides a

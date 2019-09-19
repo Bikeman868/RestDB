@@ -30,7 +30,7 @@ namespace RestDB.Interfaces.QueryLayer
         IWhileExpressionBuilder<T> BeginWhile();
 
         T Delete(string name);
-        T Assign(string name, Func<IQueryContext, object> value);
+        IExpressionBuilder<T> Assign(string name);
         T Break();
         T Continue();
     }
@@ -65,10 +65,12 @@ namespace RestDB.Interfaces.QueryLayer
     public interface IExpressionBuilder<T> : IBooleanExpressionBuilder<T>
     {
         T Variable(string name);
+        T Literal(object value);
         T Field(string name);
         T Field(string rowsetName, string name);
+        IExpressionBuilder<IExpressionBuilder<T>> Binary(BinaryOperator binaryOperator);
+        IExpressionBuilder<T> Unary(UnaryOperator unaryOperator);
     }
-
 
     public interface IIfExpressionBuilder<T> : IBooleanExpressionBuilder<IStatementBuilder<T>>
     {
@@ -104,7 +106,7 @@ namespace RestDB.Examples
             var query = builder
                 // Return the first 10 customers that have 'fred' as a rep using the 'customer_rep' index
                 .Begin()
-                .Assign("count", q => 0)
+                .Assign("count").Literal(0)
                 .BeginFor("customer", q =>
                 {
                     var customers = q.Table["customers"];
@@ -113,7 +115,7 @@ namespace RestDB.Examples
                     return index.MatchingRows(q.Transaction, new[] {matchRep});
                 })
                 .BeginIf().Compare(q => q.Variable<int>("count"), CompareOperation.Equal, q => 10).Break()
-                .Assign("count", q => q.Variable<int>("count") + 1)
+                .Assign("count").Unary(UnaryOperator.Increment).Variable("count")
                 .BeginSelect()
                 .Field("customerId").Alias("id")
                 .Field("name").Alias("customerName")

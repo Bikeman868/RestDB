@@ -2,5 +2,6 @@
 {
     public interface IQuery
     {
+        void Exceute(IQueryContext queryContext);
     }
 }
