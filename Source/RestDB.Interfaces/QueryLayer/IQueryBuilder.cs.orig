@@ -25,12 +25,17 @@ namespace RestDB.Interfaces.QueryLayer
         IStatementListBuilder<T> Begin();
         ITransactionBuilder<T> BeginTransaction();
         IRowsetBuilder<IForBuilder<T>> BeginFor(string rowName);
-        ISelectBuilder<T> BeginSelect();
-        IIfExpressionBuilder<T> If();
+        IExpressionListBuilder<T> BeginSelect();
+        IIfExpressionBuilder<T> BeginIf();
         IWhileExpressionBuilder<T> BeginWhile();
 
-        T Delete(string rowName);
+<<<<<<< HEAD
+        T Delete(string name);
         IExpressionBuilder<T> Assign(string name);
+=======
+        T Delete(string rowName);
+        T Assign(string variableName, Func<IQueryContext, object> value);
+>>>>>>> c4c0593e9457b0982eeecfdd16d764e1f7be69e0
         T Break();
         T Continue();
     }
@@ -46,16 +51,18 @@ namespace RestDB.Interfaces.QueryLayer
         T Rollback();
     }
 
-    public interface ISelectBuilder<T> : IExpressionBuilder<ISelectBuilder<T>>
+    public interface IExpressionListBuilder<T> : IExpressionBuilder<IExpressionListBuilder<T>>
     {
-        ISelectBuilder<T> Record(string name);
-        ISelectBuilder<T> Alias(string name);
+        IExpressionListBuilder<T> Record(string name);
+        IExpressionListBuilder<T> Alias(string name);
         T EndSelect();
     }
 
     public interface IBooleanExpressionBuilder<T>
     {
-        IExpressionBuilder<IExpressionBuilder<T>> Compare(CompareOperation operation);
+        T Compare(Func<IQueryContext, object> leftSide, CompareOperation operation,
+            Func<IQueryContext, object> rightSide);
+
         IAndExpressionBuilder<T> BeginAnd();
         IOrExpressionBuilder<T> BeginOr();
     }
@@ -66,65 +73,34 @@ namespace RestDB.Interfaces.QueryLayer
         T Literal(object value);
         T Field(string name);
         T Field(string rowsetName, string name);
-        T Aggregate(AggregationOperation operation, string fieldName);
-        T Aggregate(AggregationOperation operation, string rowsetName, string fieldName);
         IExpressionBuilder<IExpressionBuilder<T>> Binary(BinaryOperator binaryOperator);
         IExpressionBuilder<T> Unary(UnaryOperator unaryOperator);
     }
 
+<<<<<<< HEAD
+=======
     public interface IRowsetBuilder<T>
     {
-        T Function(Func<IQueryContext, IEnumerable<IRow>> rowsetFunc);
         IRowsetBuilder<T> Limit(uint maxRecords);
         IRowsetBuilder<T> OrderBy(string fieldName);
         IRowsetBuilder<T> Ascending();
         IRowsetBuilder<T> Descending();
+        T Function(Func<IQueryContext, IEnumerable<IRow>> rowsetFunc);
         T TableScan(string tableName);
         T IndexScan(string tableName, string indexName);
         T TableQuery(string tableName, Func<IQueryContext, IColumnQuery[]> columnValuesFunc);
         T IndexQuery(string tableName, string indexName, Func<IQueryContext, IColumnQuery[]> columnValuesFunc);
-        IGroupBuilder<T> Group();
-        IFilterTableBuilder<T> FromTable(string tableName);
+        IFilterBuilder<T> TableWhere(string tableName);
+        IFilterBuilder<T> IndexWhere(string tableName, string indexName);
     }
 
     public interface IFilterBuilder<T>
     {
-        IExpressionBuilder<T> Column(string columnName, CompareOperation compare);
-        IExpressionBuilder<T> Columns(params Tuple<string, CompareOperation, object>[] columns);
-        IFilterTableBuilder<T> Table(string tableName);
-        IAndWhereBuilder<T> BeginAnd();
-        IOrWhereBuilder<T> BeginOr();
+        IFilterBuilder<T> Column(Func<IQueryContext, IColumnQuery> columnQueryFunc);
+        T EndWhere();
     }
 
-    public interface IGroupBuilder<T>: IRowsetBuilder<IGroupBuilder<T>>
-    {
-        T By(params string[] columnNames);
-    }
-
-    public interface IFilterTableBuilder<T>
-    {
-        IExpressionBuilder<T> Column(string columnName, CompareOperation compare);
-        IExpressionBuilder<T> Columns(params Tuple<string, CompareOperation, object>[] columns);
-        IIndexTableBuilder<T> UsingIndex(string indexName);
-    }
-
-    public interface IIndexTableBuilder<T>
-    {
-        IExpressionBuilder<T> WhereColumn(string columnName, CompareOperation compare);
-        IExpressionBuilder<T> WhereColumns(params Tuple<string, CompareOperation, object>[] columns);
-        T Function(Func<IQueryContext, Tuple<IColumnDefinition, CompareOperation, object>[]> expressionFunction);
-    }
-
-    public interface IAndWhereBuilder<T> : IFilterBuilder<IAndWhereBuilder<T>>
-    {
-        T EndAnd();
-    }
-
-    public interface IOrWhereBuilder<T> : IFilterBuilder<IOrWhereBuilder<T>>
-    {
-        T EndOr();
-    }
-
+>>>>>>> c4c0593e9457b0982eeecfdd16d764e1f7be69e0
     public interface IIfExpressionBuilder<T> : IBooleanExpressionBuilder<IStatementBuilder<T>>
     {
     }
@@ -153,25 +129,44 @@ namespace RestDB.Examples
     {
         private void Example1()
         {
+            IColumnQueryFactory cq = null;
             IQueryBuilder builder = null;
 
             var query = builder
                 // Return the first 10 customers that have 'fred' as a rep using the 'customer_rep' index
                 .Begin()
-                    .Assign("count").Literal(0)
+<<<<<<< HEAD
+                .Assign("count").Literal(0)
+                .BeginFor("customer", q =>
+                {
+                    var customers = q.Table["customers"];
+                    var index = customers.Index["customer_rep"];
+                    var matchRep = cq.Create(index.Definition.Columns[0].Column, CompareOperation.Equal, "fred");
+                    return index.MatchingRows(q.Transaction, new[] {matchRep});
+                })
+                .BeginIf().Compare(q => q.Variable<int>("count"), CompareOperation.Equal, q => 10).Break()
+                .Assign("count").Unary(UnaryOperator.Increment).Variable("count")
+                .BeginSelect()
+                .Field("customerId").Alias("id")
+                .Field("name").Alias("customerName")
+                .EndSelect()
+                .EndFor()
+=======
+                    .Assign("count", q => 0)
                     .BeginFor("customer")
                         .OrderBy("customerId").Ascending()
-                        .FromTable("customers").UsingIndex("customer_rep")
-                        .Function(q => new[] { new Tuple<IColumnDefinition, CompareOperation, object>(q.Table["customers"].Column["rep_name"], CompareOperation.Equal, "fred") })
-                        //.WhereColumns(new Tuple<string, CompareOperation, object>("rep_name", CompareOperation.Equal, "fred"))
-                        //.WhereColumn("rep_name", CompareOperation.Equal).Literal("fred")
-                        .If().Compare(CompareOperation.Equal).Variable("count").Literal(10).Break()
-                        .Assign("count").Unary(UnaryOperator.Increment).Variable("count")
+                        .Limit(10)
+                        .IndexWhere("customers", "customer_rep")
+                            .Column(q => cq.Create(q.Table["customers"].Index["customer_rep"].Definition.Columns[0].Column, CompareOperation.Equal, "fred"))
+                        .EndWhere()
+                        .BeginIf().Compare(q => q.Variable<int>("count"), CompareOperation.Equal, q => 10).Break()
+                        .Assign("count", q => q.Variable<int>("count") + 1)
                         .BeginSelect()
                             .Field("customerId").Alias("id")
                             .Field("name").Alias("customerName")
                         .EndSelect()
                     .EndFor()
+>>>>>>> c4c0593e9457b0982eeecfdd16d764e1f7be69e0
                 .End()
 
                 // Build the query
@@ -193,42 +188,14 @@ namespace RestDB.Examples
                             var isNewMatch = cq.Create(users.Column["created"], CompareOperation.Greater, DateTime.UtcNow.AddDays(-7));
                             return users.MatchingRows(q.Transaction, new[] { isNewMatch });
                         })
-                        .If()
+                        .BeginIf()
                             .BeginAnd()
-                                .Compare(CompareOperation.Similar).Field("firstName").Literal("martin")
-                                .Compare(CompareOperation.Less).Field("age").Literal(18)
+                                .Compare(q => q.FieldValue<string>("firstName"), CompareOperation.Similar, q => "martin")
+                                .Compare(q => q.FieldValue<int>("age"), CompareOperation.Less, q => 18)
                             .EndAnd()
                             .Delete("user")
                     .EndFor()
                 .Commit()
-
-                // Build the query
-                .Build();
-        }
-
-        private void Example3()
-        {
-            IColumnQueryFactory cq = null;
-            IQueryBuilder builder = null;
-
-            var query = builder
-                // Return orders grouped by customer with additional customer info
-                .BeginFor("customerAggregate")
-                    .Group()
-                        .TableScan("order")
-                    .By("cutomerId")
-                    .BeginFor("customer")
-                        .FromTable("customers")
-                            .UsingIndex("px_customers")
-                            .WhereColumn("customerId", CompareOperation.Equal)
-                            .Field("customerAggregate", "customerId")
-                        .BeginSelect()
-                            .Field("customers", "customerId").Alias("id")
-                            .Field("customers", "customerName").Alias("name")
-                            .Aggregate(AggregationOperation.Sum, "customerAggregate", "orderValue").Alias("orderTotal")
-                        .EndSelect()
-                    .EndFor()
-                .EndFor()
 
                 // Build the query
                 .Build();
