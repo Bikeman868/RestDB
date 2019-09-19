@@ -213,21 +213,23 @@ namespace RestDB.Examples
 
             var query = builder
                 // Return orders grouped by customer with additional customer info
+                // where the total value of the customer's orders is more than 1000
                 .BeginFor("customerAggregate")
-                    .Group()
-                        .TableScan("order")
-                    .By("cutomerId")
-                    .BeginFor("customer")
-                        .FromTable("customers")
-                            .UsingIndex("px_customers")
-                            .WhereColumn("customerId", CompareOperation.Equal)
-                            .Field("customerAggregate", "customerId")
-                        .BeginSelect()
-                            .Field("customers", "customerId").Alias("id")
-                            .Field("customers", "customerName").Alias("name")
-                            .Aggregate(AggregationOperation.Sum, "customerAggregate", "orderValue").Alias("orderTotal")
-                        .EndSelect()
-                    .EndFor()
+                    .Group().TableScan("order").By("cutomerId")
+                    .Assign("orderTotal").Aggregate(AggregationOperation.Sum, "orderValue")
+                    .Assign("customerId").Field("customerId")
+                    .If()
+                        .Compare(CompareOperation.Greater).Variable("orderTotal").Literal(1000)
+                        .BeginFor("customer")
+                            .FromTable("customers")
+                                .UsingIndex("ix_customer_id")
+                                .WhereColumn("customerId", CompareOperation.Equal).Variable("customerId")
+                            .BeginSelect()
+                                .Variable("customerId").Alias("id")
+                                .Field("customerName").Alias("name")
+                                .Variable("orderTotal")
+                            .EndSelect()
+                        .EndFor()
                 .EndFor()
 
                 // Build the query
