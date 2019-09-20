@@ -160,11 +160,11 @@ namespace RestDB.Examples
                 .Begin()
                     .Assign("count").Literal(0)
                     .BeginFor("customer")
-                        .OrderBy("customerId").Ascending()
-                        .FromTable("customers").UsingIndex("customer_rep")
-                        .Function(q => new[] { new Tuple<IColumnDefinition, CompareOperation, object>(q.Table["customers"].Column["rep_name"], CompareOperation.Equal, "fred") })
-                        //.WhereColumns(new Tuple<string, CompareOperation, object>("rep_name", CompareOperation.Equal, "fred"))
-                        //.WhereColumn("rep_name", CompareOperation.Equal).Literal("fred")
+                            .OrderBy("customerId").Ascending()
+                            .FromTable("customers").UsingIndex("customer_rep")
+                            .Function(q => new[] { new Tuple<IColumnDefinition, CompareOperation, object>(q.Table["customers"].Column["rep_name"], CompareOperation.Equal, "fred") })
+                            //.WhereColumns(new Tuple<string, CompareOperation, object>("rep_name", CompareOperation.Equal, "fred"))
+                            //.WhereColumn("rep_name", CompareOperation.Equal).Literal("fred")
                         .If().Compare(CompareOperation.Equal).Variable("count").Literal(10).Break()
                         .Assign("count").Unary(UnaryOperator.Increment).Variable("count")
                         .BeginSelect()
@@ -186,13 +186,12 @@ namespace RestDB.Examples
             var query = builder
                 // Delete users created in the last 7 days whose first name is 'martin' and who are under 18
                 .BeginTransaction()
-                    .BeginFor("user")
-                        .Function(q =>
-                        {
-                            var users = q.Table["users"];
-                            var isNewMatch = cq.Create(users.Column["created"], CompareOperation.Greater, DateTime.UtcNow.AddDays(-7));
-                            return users.MatchingRows(q.Transaction, new[] { isNewMatch });
-                        })
+                    .BeginFor("user").Function(q =>
+                            {
+                                var users = q.Table["users"];
+                                var isNewMatch = cq.Create(users.Column["created"], CompareOperation.Greater, DateTime.UtcNow.AddDays(-7));
+                                return users.MatchingRows(q.Transaction, new[] { isNewMatch });
+                            })
                         .If()
                             .BeginAnd()
                                 .Compare(CompareOperation.Similar).Field("firstName").Literal("martin")
@@ -208,14 +207,12 @@ namespace RestDB.Examples
 
         private void Example3()
         {
-            IColumnQueryFactory cq = null;
             IQueryBuilder builder = null;
 
             var query = builder
                 // Return orders grouped by customer with additional customer info
                 // where the total value of the customer's orders is more than 1000
-                .BeginFor("customerAggregate")
-                    .Group().TableScan("order").By("cutomerId")
+                .BeginFor("customerAggregate").Group().TableScan("order").By("cutomerId")
                     .Assign("orderTotal").Aggregate(AggregationOperation.Sum, "orderValue")
                     .Assign("customerId").Field("customerId")
                     .If()
