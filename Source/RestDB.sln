@@ -3,7 +3,11 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29215.179
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RestDB.Interfaces", "RestDB.Interfaces\RestDB.Interfaces.csproj", "{A469E338-2034-4583-A2D2-C0E832519540}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RestDB.Interfaces", "RestDB.Interfaces\RestDB.Interfaces.csproj", "{A469E338-2034-4583-A2D2-C0E832519540}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RestDB.FileLayer", "RestDB.FileLayer\RestDB.FileLayer.csproj", "{244C672D-F24F-4188-85D9-344252601D6F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RestDB.UnitTests", "RestDB.UnitTests\RestDB.UnitTests.csproj", "{346CAF22-274A-4ED5-9489-155A9A841FBC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +19,14 @@ Global
 		{A469E338-2034-4583-A2D2-C0E832519540}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A469E338-2034-4583-A2D2-C0E832519540}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A469E338-2034-4583-A2D2-C0E832519540}.Release|Any CPU.Build.0 = Release|Any CPU
+		{244C672D-F24F-4188-85D9-344252601D6F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{244C672D-F24F-4188-85D9-344252601D6F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{244C672D-F24F-4188-85D9-344252601D6F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{244C672D-F24F-4188-85D9-344252601D6F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{346CAF22-274A-4ED5-9489-155A9A841FBC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{346CAF22-274A-4ED5-9489-155A9A841FBC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{346CAF22-274A-4ED5-9489-155A9A841FBC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{346CAF22-274A-4ED5-9489-155A9A841FBC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

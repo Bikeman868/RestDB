@@ -1,15 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace RestDB.Interfaces.FileLayer
 {
     public interface ILogFile : IDisposable
     {
         /// <summary>
-        /// Empties this log file deleting all transactions from it
+        /// Empties this log file.
         /// </summary>
-        /// <returns></returns>
         bool Truncate();
+
+        /// <summary>
+        /// Removes old transactions and shrinks the log file
+        /// </summary>
+        /// <param name="oldestVersionNumber">The oldest version number to keep</param>
+        bool Shrink(ulong oldestVersionNumber);
 
         /// <summary>
         /// This is called when a transaction completes and has made modifications to the data.
@@ -33,7 +39,7 @@ namespace RestDB.Interfaces.FileLayer
         /// successfully applied to the main data file and this log entry is no longer
         /// needed to roll the database forward when restarting after a crash.
         /// </summary>
-        /// <param name="offset">You obtain this offset by calling the Write() method</param>
+        /// <param name="offset">You obtain this offset by calling the CommitStart() method</param>
         void CommitApplied(ulong offset);
 
         /// <summary>
@@ -50,7 +56,7 @@ namespace RestDB.Interfaces.FileLayer
             ulong offset,
             out LogEntryStatus status,
             out ulong versionNumber,
-            out ulong updateCount,
+            out uint updateCount,
             out ulong updateSize);
 
         /// <summary>

@@ -7,6 +7,11 @@
     public class PageUpdate
     {
         /// <summary>
+        /// Defines the order in which updates were written
+        /// </summary>
+        public uint SequenceNumber;
+
+        /// <summary>
         /// The page number of the page to change
         /// </summary>
         public ulong PageNumber;

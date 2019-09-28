@@ -1,9 +1,11 @@
-﻿namespace RestDB.Interfaces
+﻿using System;
+
+namespace RestDB.Interfaces
 {
     /// <summary>
     /// This is used internally to track information related to a transaction context
     /// </summary>
-    public interface ITransaction
+    public interface ITransaction: IComparable<ITransaction>
     {
         /// <summary>
         /// The database version that as current when this transaction started
