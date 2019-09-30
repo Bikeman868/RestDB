@@ -62,14 +62,14 @@ namespace RestDB.FileLayer.LogFiles
             return _versionLogFile.CommitStart(transaction, updates);
         }
 
-        void ILogFile.CommitApplied(ulong offset)
-        {
-            _versionLogFile.CommitApplied(offset);
-        }
-
         void ILogFile.CommitComplete(ulong offset)
         {
             _versionLogFile.CommitComplete(offset);
+        }
+
+        void ILogFile.CommitLogged(ulong offset)
+        {
+            _versionLogFile.CommitLogged(offset);
         }
 
         List<PageUpdate> ILogFile.GetUpdates(ulong offset)

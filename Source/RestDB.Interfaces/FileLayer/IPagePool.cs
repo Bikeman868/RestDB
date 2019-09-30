@@ -10,7 +10,7 @@
         /// <summary>
         /// The size of the pages in this page pool
         /// </summary>
-        int PageSize { get; }
+        uint PageSize { get; }
 
         /// <summary>
         /// Gets an available page from the pool and initializes its page number.

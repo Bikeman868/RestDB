@@ -32,7 +32,7 @@ namespace RestDB.Interfaces.FileLayer
         /// transaction can be rolled forward after a system crash.
         /// </summary>
         /// <param name="offset">You obtain this offset by calling the CommitStart() method</param>
-        void CommitComplete(ulong offset);
+        void CommitLogged(ulong offset);
 
         /// <summary>
         /// This is called when all of the changes for a given transaction have been
@@ -40,7 +40,7 @@ namespace RestDB.Interfaces.FileLayer
         /// needed to roll the database forward when restarting after a crash.
         /// </summary>
         /// <param name="offset">You obtain this offset by calling the CommitStart() method</param>
-        void CommitApplied(ulong offset);
+        void CommitComplete(ulong offset);
 
         /// <summary>
         /// Skips to the next log file entry and reads the header only

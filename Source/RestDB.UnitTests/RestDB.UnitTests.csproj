@@ -13,4 +13,10 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.8.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\RestDB.FileLayer\RestDB.FileLayer.csproj" />
+    <ProjectReference Include="..\RestDB.Interfaces\RestDB.Interfaces.csproj" />
+    <ProjectReference Include="..\RestDB.Mocks\RestDB.Mocks.csproj" />
+  </ItemGroup>
+
 </Project>

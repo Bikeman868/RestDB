@@ -44,7 +44,7 @@ namespace RestDB.FileLayer.FileSets
 
                 switch (status)
                 {
-                    case LogEntryStatus.NotStarted:
+                    case LogEntryStatus.LogStarted:
                         mustRollBack.Add(version);
                         break;
                     case LogEntryStatus.LoggedThis:
@@ -139,7 +139,7 @@ namespace RestDB.FileLayer.FileSets
                         if (page != null)
                         {
                             _dataFile.Write(page);
-                            page.Dereference();
+                            page.Dispose();
                         }
 
                         page = _pagePool.Get(update.PageNumber);
@@ -152,10 +152,10 @@ namespace RestDB.FileLayer.FileSets
                 if (page != null)
                 {
                     _dataFile.Write(page);
-                    page.Dereference();
+                    page.Dispose();
                 }
 
-                _logFile.CommitApplied(transactionDetail.LogFileOffset);
+                _logFile.CommitComplete(transactionDetail.LogFileOffset);
             });
 
             return task;

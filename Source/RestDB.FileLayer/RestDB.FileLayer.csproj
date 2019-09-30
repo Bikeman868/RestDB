@@ -14,14 +14,11 @@
 
   <ItemGroup>
     <PackageReference Include="Ioc.Modules" Version="1.3.2" />
+    <PackageReference Include="Owin.Framework" Version="2.6.9" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\RestDB.Interfaces\RestDB.Interfaces.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Pages\" />
   </ItemGroup>
 
 </Project>

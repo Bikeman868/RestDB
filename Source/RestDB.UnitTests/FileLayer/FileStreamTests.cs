@@ -6,7 +6,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Tests
+namespace RestDB.UnitTests.FileLayer
 {
     public class FileStreamTests: TestBase
     {

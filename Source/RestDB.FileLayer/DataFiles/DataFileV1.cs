@@ -57,11 +57,8 @@ namespace RestDB.FileLayer.DataFiles
                 {
                     _fileStream.Seek(PageOffset(page.PageNumber), SeekOrigin.Begin);
                     var count = _fileStream.Read(page.Data, 0, (int)_pageSize);
-                    if (count < _pageSize)
-                        Array.Clear(page.Data, count, (int)(_pageSize - count));
+                    return count == _pageSize;
                 }
-
-                return true;
             }
 
             bool IDataFile.Write(IPage page)

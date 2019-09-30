@@ -11,7 +11,7 @@
         /// The system failed whilst writing the log entry and no updates
         /// were made to the data file
         /// </summary>
-        NotStarted,
+        LogStarted,
 
         /// <summary>
         /// The system failed after fully writing the log file entry in this file.
@@ -31,6 +31,6 @@
         /// The data was written to the log file and this data file. The changes
         /// may or may not have been applied to the other data files.
         /// </summary>
-        Written
+        CompleteThis
     }
 }
