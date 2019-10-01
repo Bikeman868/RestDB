@@ -92,19 +92,22 @@ namespace RestDB.UnitTests.FileLayer
             Assert.AreEqual(0, originalPage.Data[21]);
             Assert.AreEqual(0, originalPage.Data[22]);
 
-            _fileSet
-                .CommitTransaction(transaction)
-                .ContinueWith(t => _fileSet.FinalizeTransaction(transaction))
-                .Wait();
+            _fileSet.CommitTransaction(transaction).Wait();
+            _fileSet.FinalizeTransaction(transaction).Wait();
 
-            // After committing the transaction the page should be modified
+            // After commiting and finalizing the transaction the page should be
+            // changed in the data file
 
             var newPage = _pagePool.Get(1);
-            _fileSet.Read(originalPage);
+            _fileSet.Read(newPage);
 
             Assert.AreEqual(5, newPage.Data[20]);
             Assert.AreEqual(6, newPage.Data[21]);
             Assert.AreEqual(7, newPage.Data[22]);
+
+            Assert.AreEqual(0, originalPage.Data[20]);
+            Assert.AreEqual(0, originalPage.Data[21]);
+            Assert.AreEqual(0, originalPage.Data[22]);
         }
     }
 }
