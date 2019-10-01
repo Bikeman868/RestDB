@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Moq.Modules" Version="1.0.2" />
+    <PackageReference Include="Moq.Modules" Version="1.0.4" />
     <PackageReference Include="nunit" Version="3.10.1" />
     <PackageReference Include="NUnit3TestAdapter" Version="3.10.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.8.0" />
@@ -16,7 +16,6 @@
   <ItemGroup>
     <ProjectReference Include="..\RestDB.FileLayer\RestDB.FileLayer.csproj" />
     <ProjectReference Include="..\RestDB.Interfaces\RestDB.Interfaces.csproj" />
-    <ProjectReference Include="..\RestDB.Mocks\RestDB.Mocks.csproj" />
   </ItemGroup>
 
 </Project>

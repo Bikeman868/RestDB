@@ -1,4 +1,4 @@
-﻿using RestDB.Interfaces;
+﻿using RestDB.Interfaces.DatabaseLayer;
 using RestDB.Interfaces.FileLayer;
 using System;
 using System.Collections.Generic;
@@ -22,6 +22,12 @@ namespace RestDB.FileLayer.FileSets
             _pagePool = pagePoolFactory.Create(dataFile.PageSize);
 
             _transactions = new Dictionary<ITransaction, TransactionDetail>();
+        }
+
+        public void Dispose()
+        {
+            _logFile.Dispose();
+            _dataFile.Dispose();
         }
 
         uint IFileSet.PageSize => _dataFile.PageSize;
@@ -75,8 +81,22 @@ namespace RestDB.FileLayer.FileSets
             return _dataFile.Read(page);
         }
 
-        bool IFileSet.Write(PageUpdate update, ITransaction transaction)
+        bool IFileSet.Write(ITransaction transaction, PageUpdate update)
         {
+            if (transaction == null)
+            {
+                var page = _pagePool.Get(update.PageNumber);
+
+                if (!_dataFile.Read(page))
+                    page.Data.Initialize();
+
+                update.Data.CopyTo(page.Data, update.Offset);
+
+                _dataFile.Write(page);
+
+                return true;
+            }
+
             TransactionDetail transactionDetail;
             lock (_transactions)
             {

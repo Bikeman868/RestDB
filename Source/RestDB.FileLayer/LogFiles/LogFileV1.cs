@@ -1,4 +1,4 @@
-﻿using RestDB.Interfaces;
+﻿using RestDB.Interfaces.DatabaseLayer;
 using RestDB.Interfaces.FileLayer;
 using System;
 using System.Collections.Generic;
@@ -56,7 +56,7 @@ namespace RestDB.FileLayer.LogFiles
             return true;
         }
 
-        bool ILogFile.Shrink(ulong oldestVersionNumber)
+        bool ILogFile.Shrink(ulong? oldestVersionNumber, bool deleteCompleted)
         {
             lock (_lock)
             {

@@ -1,11 +1,9 @@
 ﻿using Moq;
 using Moq.Modules;
 using RestDB.Interfaces.FileLayer;
-using System;
 using System.Collections.Generic;
-using System.Text;
 
-namespace RestDB.Mocks.FileLayer
+namespace RestDB.UnitTests.Mocks.FileLayer
 {
     public class MockDataFile : MockImplementationProvider<IDataFile>
     {

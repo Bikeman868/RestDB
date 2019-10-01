@@ -2,7 +2,7 @@
 using Moq.Modules;
 using NUnit.Framework;
 using RestDB.FileLayer.LogFiles;
-using RestDB.Interfaces;
+using RestDB.Interfaces.DatabaseLayer;
 using RestDB.Interfaces.FileLayer;
 
 namespace RestDB.UnitTests.FileLayer
@@ -22,7 +22,8 @@ namespace RestDB.UnitTests.FileLayer
         [TearDown]
         public void TearDown()
         {
-            _logFile.Dispose();
+            if (_logFile != null)
+                _logFile.Dispose();
         }
 
         [Test]

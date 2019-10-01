@@ -22,7 +22,8 @@ namespace RestDB.UnitTests.FileLayer
         [TearDown]
         public void TearDown()
         {
-            _dataFile.Dispose();
+            if (_dataFile != null)
+                _dataFile.Dispose();
         }
 
         [Test]

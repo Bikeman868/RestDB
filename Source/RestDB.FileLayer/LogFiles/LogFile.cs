@@ -1,4 +1,4 @@
-﻿using RestDB.Interfaces;
+﻿using RestDB.Interfaces.DatabaseLayer;
 using RestDB.Interfaces.FileLayer;
 using System;
 using System.Collections.Generic;
@@ -52,9 +52,9 @@ namespace RestDB.FileLayer.LogFiles
             return _versionLogFile.Truncate();
         }
 
-        bool ILogFile.Shrink(ulong oldestVersionNumber)
+        bool ILogFile.Shrink(ulong? oldestVersionNumber, bool deleteCompleted)
         {
-            return _versionLogFile.Shrink(oldestVersionNumber);
+            return _versionLogFile.Shrink(oldestVersionNumber, deleteCompleted);
         }
 
         ulong ILogFile.CommitStart(ITransaction transaction, IEnumerable<PageUpdate> updates)

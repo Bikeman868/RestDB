@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using RestDB.Interfaces.DatabaseLayer;
+using System;
+using System.Threading.Tasks;
 
 namespace RestDB.Interfaces.FileLayer
 {
@@ -8,7 +10,7 @@ namespace RestDB.Interfaces.FileLayer
     /// sudden failure that resulted in data only being partially written. Guarantees that
     /// all pages are fully written to disk or not written to disk at all.
     /// </summary>
-    public interface IFileSet
+    public interface IFileSet: IDisposable
     {
         /// <summary>
         /// Returns the page size of data in this file set
@@ -47,15 +49,15 @@ namespace RestDB.Interfaces.FileLayer
         /// Writes a change to a page into the data file and log file in a way that
         /// makes the write recoverable if there is a sudden system failure
         /// </summary>
-        /// <param name="update">The data to write into the file</param>
         /// <param name="transaction">The database version number of the
         /// transaction that made these changes. If the system fails part way through
         /// a write operation either all of the pages with the same version number will be
         /// written to the data file or none of these pages will be written</param>
+        /// <param name="update">The data to write into the file</param>
         /// <returns>True if the write operation succeeds. Fails when the
         /// log file is full or unwritable, or system shutdown is in progress and
         /// changes are being flushed to disk</returns>
-        bool Write(PageUpdate update, ITransaction transaction);
+        bool Write(ITransaction transaction, PageUpdate update);
 
         /// <summary>
         /// Tells the file set that there are no more pages to write for a

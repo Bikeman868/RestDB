@@ -1,11 +1,11 @@
 ﻿using System;
 
-namespace RestDB.Interfaces
+namespace RestDB.Interfaces.DatabaseLayer
 {
     /// <summary>
     /// This is used internally to track information related to a transaction context
     /// </summary>
-    public interface ITransaction: IComparable<ITransaction>
+    public interface ITransaction : IComparable<ITransaction>
     {
         /// <summary>
         /// Returns a unique ID assiciated with this transaction

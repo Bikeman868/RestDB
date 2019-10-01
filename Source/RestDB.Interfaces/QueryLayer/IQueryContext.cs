@@ -1,4 +1,5 @@
-﻿using RestDB.Interfaces.TableLayer;
+﻿using RestDB.Interfaces.DatabaseLayer;
+using RestDB.Interfaces.TableLayer;
 
 namespace RestDB.Interfaces.QueryLayer
 {

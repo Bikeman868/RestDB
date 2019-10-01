@@ -5,11 +5,9 @@ VisualStudioVersion = 16.0.29215.179
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RestDB.Interfaces", "RestDB.Interfaces\RestDB.Interfaces.csproj", "{A469E338-2034-4583-A2D2-C0E832519540}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RestDB.FileLayer", "RestDB.FileLayer\RestDB.FileLayer.csproj", "{244C672D-F24F-4188-85D9-344252601D6F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RestDB.FileLayer", "RestDB.FileLayer\RestDB.FileLayer.csproj", "{244C672D-F24F-4188-85D9-344252601D6F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RestDB.UnitTests", "RestDB.UnitTests\RestDB.UnitTests.csproj", "{346CAF22-274A-4ED5-9489-155A9A841FBC}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RestDB.Mocks", "RestDB.Mocks\RestDB.Mocks.csproj", "{CF9F46EE-A3EF-417D-867C-5DD14D91BFB3}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "RestDB.UnitTests", "RestDB.UnitTests\RestDB.UnitTests.csproj", "{346CAF22-274A-4ED5-9489-155A9A841FBC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -29,10 +27,6 @@ Global
 		{346CAF22-274A-4ED5-9489-155A9A841FBC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{346CAF22-274A-4ED5-9489-155A9A841FBC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{346CAF22-274A-4ED5-9489-155A9A841FBC}.Release|Any CPU.Build.0 = Release|Any CPU
-		{CF9F46EE-A3EF-417D-867C-5DD14D91BFB3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{CF9F46EE-A3EF-417D-867C-5DD14D91BFB3}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{CF9F46EE-A3EF-417D-867C-5DD14D91BFB3}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{CF9F46EE-A3EF-417D-867C-5DD14D91BFB3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

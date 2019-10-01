@@ -1,4 +1,5 @@
-﻿using System;
+﻿using RestDB.Interfaces.DatabaseLayer;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -7,15 +8,24 @@ namespace RestDB.Interfaces.FileLayer
     public interface ILogFile : IDisposable
     {
         /// <summary>
-        /// Empties this log file.
+        /// Empties this log file completely. You should only do this at startup
+        /// after the log file has been used to recover from any system failures.
+        /// If the system crashed leaving the data file partially updated and you delete
+        /// the log then there is no way to recover the data file to a consistent state.
         /// </summary>
+        /// <remarks>Use with great care</remarks>
         bool Truncate();
 
         /// <summary>
         /// Removes old transactions and shrinks the log file
         /// </summary>
-        /// <param name="oldestVersionNumber">The oldest version number to keep</param>
-        bool Shrink(ulong oldestVersionNumber);
+        /// <param name="oldestVersionNumber">The oldest version number to keep. Any
+        /// transactions that are older than this will be deleted from the log. Pass
+        /// null to keep all versions</param>
+        /// <param name="deleteCompleted">Pass true to delete all entries in 
+        /// the log for transactions that have been fully written to the main
+        /// data file and hence the log file entry is no longer needed</param>
+        bool Shrink(ulong? oldestVersionNumber, bool deleteCompleted);
 
         /// <summary>
         /// This is called when a transaction completes and has made modifications to the data.
