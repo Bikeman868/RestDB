@@ -54,11 +54,11 @@ namespace RestDB.Interfaces.FileLayer
         /// transaction that made these changes. If the system fails part way through
         /// a write operation either all of the pages with the same version number will be
         /// written to the data file or none of these pages will be written</param>
-        /// <param name="update">The data to write into the file</param>
+        /// <param name="updates">The data to write into the file</param>
         /// <returns>True if the write operation succeeds. Fails when the
         /// log file is full or unwritable, or system shutdown is in progress and
         /// changes are being flushed to disk</returns>
-        bool Write(ITransaction transaction, PageUpdate update);
+        bool Write(ITransaction transaction, IEnumerable<PageUpdate> updates);
 
         /// <summary>
         /// Tells the file set that there are no more pages to write for a

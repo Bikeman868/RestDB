@@ -18,7 +18,10 @@ namespace RestDB.FileLayer.FileSets
 
         int _logFileRoundRobin;
 
-        public FileSet(IEnumerable<IDataFile> dataFiles, IEnumerable<ILogFile> logFiles, IPagePoolFactory pagePoolFactory)
+        public FileSet(
+            IEnumerable<IDataFile> dataFiles, 
+            IEnumerable<ILogFile> logFiles, 
+            IPagePoolFactory pagePoolFactory)
         {
             _dataFiles = dataFiles.ToArray();
             _logFiles = logFiles.ToArray();
@@ -101,15 +104,20 @@ namespace RestDB.FileLayer.FileSets
             return _dataFiles[fileIndex].Read(filePageNumber, page.Data);
         }
 
-        bool IFileSet.Write(ITransaction transaction, PageUpdate update)
+        bool IFileSet.Write(ITransaction transaction, IEnumerable<PageUpdate> updates)
         {
             if (transaction == null)
             {
-                ulong filePageNumber;
-                int fileIndex;
-                GetPageLocation(update.PageNumber, out filePageNumber, out fileIndex);
+                foreach (var update in updates)
+                {
+                    ulong filePageNumber;
+                    int fileIndex;
+                    GetPageLocation(update.PageNumber, out filePageNumber, out fileIndex);
 
-                return _dataFiles[fileIndex].Write(filePageNumber, update.Data, update.Offset);
+                    if (!_dataFiles[fileIndex].Write(filePageNumber, update.Data, update.Offset))
+                        return false;
+                }
+                return true;
             }
 
             TransactionDetail transactionDetail;
@@ -126,7 +134,7 @@ namespace RestDB.FileLayer.FileSets
             }
 
             lock (transactionDetail)
-                transactionDetail.PendingUpdates.Add(update);
+                transactionDetail.PendingUpdates.AddRange(updates);
 
             return true;
         }
