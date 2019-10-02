@@ -111,8 +111,11 @@ namespace RestDB.FileLayer.FileSets
                             int fileIndex;
                             GetPageLocation(update.PageNumber, out filePageNumber, out fileIndex);
 
-                            _dataFiles[fileIndex].Write(filePageNumber, update.Data, update.Offset);
+                            if (!_dataFiles[fileIndex].Write(filePageNumber, update.Data, update.Offset))
+                                throw new FileLayerException("Data file write failed when rolling forward transaction " + version);
                         }
+
+                        logFile.CommitComplete(offset);
                     }
 
                     offset = status == LogEntryStatus.Eof ? 0UL : next;

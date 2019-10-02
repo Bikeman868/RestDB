@@ -23,14 +23,14 @@ namespace RestDB.Interfaces.FileLayer
         /// set that were not fully written to the data file but may or my not be fully
         /// committed to the log file.
         /// </summary>
-        /// <param name="rollBackVersions">Returns a list of transaction version numbers
+        /// <param name="mustRollBackVersions">Returns a list of transaction version numbers
         /// that must be rolled back because some data may have been lost. If any
         /// file set returns this status for a transaction it must be rolled back
         /// in all file sets</param>
-        /// <param name="rollForwardVersions">Returns a list of transactions that
+        /// <param name="canRollForwardVersions">Returns a list of transactions that
         /// can be rolled forward in this file set. Only if all file sets return this
         /// status for a transaction should the transaction be rolled forwards</param>
-        void GetIncompleteTransactions(out ulong[] rollBackVersions, out ulong[] rollForwardVersions);
+        void GetIncompleteTransactions(out ulong[] mustRollBackVersions, out ulong[] canRollForwardVersions);
 
         /// <summary>
         /// Call this at startup to recover partially written data and

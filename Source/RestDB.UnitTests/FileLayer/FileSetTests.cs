@@ -12,7 +12,7 @@ using System.Threading;
 
 namespace RestDB.UnitTests.FileLayer
 {
-    public class FileSetTests: TestBase
+    public class FileSetTests : TestBase
     {
         const uint _pageSize = 64;
 
@@ -60,7 +60,7 @@ namespace RestDB.UnitTests.FileLayer
                 _pagePoolFactory);
 
             _fileSet.Write(
-                null, 
+                null,
                 Enumerable.Repeat(
                     new PageUpdate
                     {
@@ -68,7 +68,7 @@ namespace RestDB.UnitTests.FileLayer
                         PageNumber = 1,
                         Offset = 20,
                         Data = new byte[] { 5, 6, 7 }
-                    }, 
+                    },
                     1));
 
             var page = _pagePool.Get(1);
@@ -155,7 +155,7 @@ namespace RestDB.UnitTests.FileLayer
 
             _fileSet.Write(
                 transaction1,
-                new [] {
+                new[] {
                     new PageUpdate
                     {
                         SequenceNumber = 0,
@@ -330,12 +330,12 @@ namespace RestDB.UnitTests.FileLayer
 
             // Roll forward committed transactions
 
-            ulong[] rollBackVersions;
-            ulong[] rollForwardVersions;
-            _fileSet.GetIncompleteTransactions(out rollBackVersions, out rollForwardVersions);
+            ulong[] mustRollBackVersions;
+            ulong[] canRollForwardVersions;
+            _fileSet.GetIncompleteTransactions(out mustRollBackVersions, out canRollForwardVersions);
 
-            _fileSet.RollBack(rollBackVersions);
-            _fileSet.RollForward(rollForwardVersions);
+            _fileSet.RollBack(mustRollBackVersions);
+            _fileSet.RollForward(canRollForwardVersions);
 
             // After rolling forward the page should be changed in the data file
 
@@ -357,12 +357,126 @@ namespace RestDB.UnitTests.FileLayer
             Assert.AreEqual(10, newPage.Data[30]);
             Assert.AreEqual(11, newPage.Data[31]);
             Assert.AreEqual(12, newPage.Data[32]);
+
+            // There should be no incomplete transactions now
+
+            _fileSet.GetIncompleteTransactions(out mustRollBackVersions, out canRollForwardVersions);
+
+            Assert.AreEqual(0, mustRollBackVersions.Length);
+            Assert.AreEqual(0, canRollForwardVersions.Length);
         }
 
         [Test]
         public void should_roll_back_uncommitted_transactions_on_restart()
         {
+            _fileSet = new FileSet(
+                new IDataFile[] { new DataFile(_dataFileInfo1, _pageSize), new DataFile(_dataFileInfo2, _pageSize) },
+                new ILogFile[] { new LogFile(_logFileInfo1, true), new LogFile(_logFileInfo2, true) },
+                _pagePoolFactory);
 
+            var databaseFactory = SetupMock<IDatabaseFactory>();
+            var pageStoreFactory = SetupMock<IPageStoreFactory>();
+
+            var pageStore = pageStoreFactory.Open(_fileSet);
+            var database = databaseFactory.Open(pageStore);
+
+            var transaction1 = database.BeginTransaction();
+            _fileSet.Write(
+                transaction1,
+                new[] {
+                new PageUpdate
+                {
+                    SequenceNumber = 0,
+                    PageNumber = 1,
+                    Offset = 20,
+                    Data = new byte[] { 1, 2, 3 }
+                }
+                });
+            database.CommitTransaction(transaction1);
+
+            var transaction2 = database.BeginTransaction();
+            _fileSet.Write(
+                transaction2,
+                new[] {
+                new PageUpdate
+                {
+                    SequenceNumber = 0,
+                    PageNumber = 1,
+                    Offset = 25,
+                    Data = new byte[] { 4, 5, 6 }
+                }
+                });
+            database.CommitTransaction(transaction2);
+
+            var transaction3 = database.BeginTransaction();
+            _fileSet.Write(
+                transaction3,
+                new[] {
+                new PageUpdate
+                {
+                    SequenceNumber = 0,
+                    PageNumber = 1,
+                    Offset = 5,
+                    Data = new byte[] { 7, 8, 9 }
+                },
+                new PageUpdate
+                {
+                    SequenceNumber = 0,
+                    PageNumber = 1,
+                    Offset = 30,
+                    Data = new byte[] { 10, 11, 12 }
+                }
+                });
+            database.CommitTransaction(transaction3);
+
+            // Before the transaction is committed the page should be in its original state
+
+            var originalPage = _pagePool.Get(1);
+            _fileSet.Read(originalPage);
+
+            for (var i = 0; i < _pageSize; i++)
+                Assert.AreEqual(0, originalPage.Data[i]);
+
+            // Commit transactions to the log files but do not update the data files
+
+            _fileSet.CommitTransaction(transaction1).Wait();
+            _fileSet.CommitTransaction(transaction2).Wait();
+            _fileSet.CommitTransaction(transaction3).Wait();
+
+            // Shut down and close all the files
+
+            _fileSet.Dispose();
+
+            // Reopen all of the files
+
+            _fileSet = new FileSet(
+                new IDataFile[] { new DataFile(_dataFileInfo1), new DataFile(_dataFileInfo2) },
+                new ILogFile[] { new LogFile(_logFileInfo1, false), new LogFile(_logFileInfo2, false) },
+                _pagePoolFactory);
+
+            // Roll back all transactions
+
+            ulong[] mustRollBackVersions;
+            ulong[] canRollForwardVersions;
+            _fileSet.GetIncompleteTransactions(out mustRollBackVersions, out canRollForwardVersions);
+
+            _fileSet.RollBack(mustRollBackVersions);
+            _fileSet.RollBack(canRollForwardVersions);
+
+            // After rolling back the page should be unchanged in the data file
+
+            var newPage = _pagePool.Get(1);
+            _fileSet.Read(newPage);
+
+            for (var i = 0; i < _pageSize; i++)
+                Assert.AreEqual(0, newPage.Data[i]);
+
+            // There should be no incomplete transactions now
+
+            _fileSet.GetIncompleteTransactions(out mustRollBackVersions, out canRollForwardVersions);
+
+            Assert.AreEqual(0, mustRollBackVersions.Length);
+            Assert.AreEqual(0, canRollForwardVersions.Length);
         }
     }
 }

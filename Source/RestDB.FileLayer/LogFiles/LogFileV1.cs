@@ -3,8 +3,6 @@ using RestDB.Interfaces.FileLayer;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace RestDB.FileLayer.LogFiles
 {
@@ -127,6 +125,8 @@ namespace RestDB.FileLayer.LogFiles
 
         void ILogFile.CommitLogged(ulong offset)
         {
+            if (offset == 0UL) offset = 4UL;
+
             lock (_lock)
             {
                 _fileStream.Seek((long)offset + 12, SeekOrigin.Begin);
@@ -136,7 +136,9 @@ namespace RestDB.FileLayer.LogFiles
 
         void ILogFile.CommitComplete(ulong offset)
         {
-            lock(_lock)
+            if (offset == 0UL) offset = 4UL;
+
+            lock (_lock)
             {
                 _fileStream.Seek((long)offset + 12, SeekOrigin.Begin);
                 _fileStream.WriteByte((byte)LogEntryStatus.CompleteThis);
@@ -145,6 +147,8 @@ namespace RestDB.FileLayer.LogFiles
 
         void ILogFile.RolledBack(ulong offset)
         {
+            if (offset == 0UL) offset = 4UL;
+
             lock (_lock)
             {
                 _fileStream.Seek((long)offset + 12, SeekOrigin.Begin);
