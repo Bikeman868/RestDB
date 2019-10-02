@@ -1,5 +1,6 @@
 ﻿using RestDB.Interfaces.DatabaseLayer;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace RestDB.Interfaces.FileLayer
@@ -33,17 +34,17 @@ namespace RestDB.Interfaces.FileLayer
 
         /// <summary>
         /// Call this at startup to recover partially written data and
-        /// fix errors in the data file using the log file for a specific 
-        /// transaction
+        /// fix errors in the data file using the log file for specific 
+        /// transactions
         /// </summary>
-        void RollForward(ulong versionNumber);
+        void RollForward(IEnumerable<ulong> versionNumbers);
 
         /// <summary>
         /// Call this at startup to undo the changes for a given transaction.
         /// Call this method when any fileset contains partially written data
-        /// for a specific transaction.
+        /// for specific transactions.
         /// </summary>
-        void RollBack(ulong versionNumber);
+        void RollBack(IEnumerable<ulong> versionNumbers);
 
         /// <summary>
         /// Writes a change to a page into the data file and log file in a way that

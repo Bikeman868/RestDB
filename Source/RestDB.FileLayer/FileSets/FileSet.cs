@@ -11,26 +11,39 @@ namespace RestDB.FileLayer.FileSets
     internal class FileSet : IFileSet
     {
         readonly IPagePool _pagePool;
-        readonly IDataFile _dataFile;
-        readonly ILogFile _logFile;
+        readonly IDataFile[] _dataFiles;
+        readonly ILogFile[] _logFiles;
+        readonly uint _pageSize;
         readonly IDictionary<ITransaction, TransactionDetail> _transactions;
 
-        public FileSet(IDataFile dataFile, ILogFile logFile, IPagePoolFactory pagePoolFactory)
+        int _logFileRoundRobin;
+
+        public FileSet(IEnumerable<IDataFile> dataFiles, IEnumerable<ILogFile> logFiles, IPagePoolFactory pagePoolFactory)
         {
-            _dataFile = dataFile;
-            _logFile = logFile;
-            _pagePool = pagePoolFactory.Create(dataFile.PageSize);
+            _dataFiles = dataFiles.ToArray();
+            _logFiles = logFiles.ToArray();
+
+            if (_dataFiles.Length < 1) throw new FileLayerException("You must have at least 1 data file");
+            if (_logFiles.Length < 1) throw new FileLayerException("You must have at least 1 log file");
+
+            _pageSize = _dataFiles[0].PageSize;
+            if (_dataFiles.Any(df => df.PageSize != _pageSize))
+                throw new FileLayerException("All of the data files must have the same page size");
+
+            if (_dataFiles.Length > 64) throw new FileLayerException("The maximum number of data files is 64");
+
+            _pagePool = pagePoolFactory.Create(_pageSize);
 
             _transactions = new Dictionary<ITransaction, TransactionDetail>();
         }
 
         public void Dispose()
         {
-            _logFile.Dispose();
-            _dataFile.Dispose();
+            foreach (var logFile in _logFiles) logFile.Dispose();
+            foreach(var dataFile in _dataFiles) dataFile.Dispose();
         }
 
-        uint IFileSet.PageSize => _dataFile.PageSize;
+        uint IFileSet.PageSize => _pageSize;
 
         void IFileSet.GetIncompleteTransactions(
             out ulong[] rollBackVersions, 
@@ -39,38 +52,41 @@ namespace RestDB.FileLayer.FileSets
             var mustRollBack = new List<ulong>();
             var canRollForward = new List<ulong>();
 
-            var offset = 0UL;
-            do
+            foreach (var logFile in _logFiles)
             {
-                LogEntryStatus status;
-                ulong version;
-                uint count;
-                ulong size;
-                offset = _logFile.ReadNext(offset, out status, out version, out count, out size);
-
-                switch (status)
+                var offset = 0UL;
+                do
                 {
-                    case LogEntryStatus.LogStarted:
-                        mustRollBack.Add(version);
-                        break;
-                    case LogEntryStatus.LoggedThis:
-                    case LogEntryStatus.LoggedAll:
-                        canRollForward.Add(version);
-                        break;
-                }
-            } while (offset > 0);
+                    LogEntryStatus status;
+                    ulong version;
+                    uint count;
+                    ulong size;
+                    offset = logFile.ReadNext(offset, out status, out version, out count, out size);
+
+                    switch (status)
+                    {
+                        case LogEntryStatus.LogStarted:
+                            mustRollBack.Add(version);
+                            break;
+                        case LogEntryStatus.LoggedThis:
+                        case LogEntryStatus.LoggedAll:
+                            canRollForward.Add(version);
+                            break;
+                    }
+                } while (offset > 0);
+            }
 
             rollBackVersions = mustRollBack.OrderBy(v => v).ToArray();
             rollForwardVersions = canRollForward.OrderBy(v => v).ToArray();
         }
 
-        void IFileSet.RollForward(ulong versionNumber)
+        void IFileSet.RollForward(IEnumerable<ulong> versionNumbers)
         {
             // TODO: implement resillience
             throw new NotImplementedException();
         }
 
-        void IFileSet.RollBack(ulong versionNumber)
+        void IFileSet.RollBack(IEnumerable<ulong> versionNumbers)
         {
             // TODO: implement resillience
             throw new NotImplementedException();
@@ -78,23 +94,22 @@ namespace RestDB.FileLayer.FileSets
 
         bool IFileSet.Read(IPage page)
         {
-            return _dataFile.Read(page);
+            ulong filePageNumber;
+            int fileIndex;
+            GetPageLocation(page.PageNumber, out filePageNumber, out fileIndex);
+
+            return _dataFiles[fileIndex].Read(filePageNumber, page.Data);
         }
 
         bool IFileSet.Write(ITransaction transaction, PageUpdate update)
         {
             if (transaction == null)
             {
-                var page = _pagePool.Get(update.PageNumber);
+                ulong filePageNumber;
+                int fileIndex;
+                GetPageLocation(update.PageNumber, out filePageNumber, out fileIndex);
 
-                if (!_dataFile.Read(page))
-                    page.Data.Initialize();
-
-                update.Data.CopyTo(page.Data, update.Offset);
-
-                _dataFile.Write(page);
-
-                return true;
+                return _dataFiles[fileIndex].Write(filePageNumber, update.Data, update.Offset);
             }
 
             TransactionDetail transactionDetail;
@@ -127,8 +142,8 @@ namespace RestDB.FileLayer.FileSets
 
             return Task.Run(() => 
             {
-                transactionDetail.LogFileOffset = _logFile.CommitStart(
-                    transaction, transactionDetail.PendingUpdates);
+                transactionDetail.LogFileIndex = NextLogFileIndex();
+                transactionDetail.LogFileOffset = _logFiles[transactionDetail.LogFileIndex].CommitStart(transaction, transactionDetail.PendingUpdates);
             });
         }
 
@@ -152,18 +167,23 @@ namespace RestDB.FileLayer.FileSets
                     .ThenBy(u => u.SequenceNumber);
 
                 IPage page = null;
+                ulong filePageNumber;
+                int fileIndex;
+
                 foreach(var update in updatesByPage)
                 {
                     if (page == null || page.PageNumber != update.PageNumber)
                     {
                         if (page != null)
                         {
-                            _dataFile.Write(page);
+                            GetPageLocation(page.PageNumber, out filePageNumber, out fileIndex);
+                            _dataFiles[fileIndex].Write(filePageNumber, page.Data);
                             page.Dispose();
                         }
 
                         page = _pagePool.Get(update.PageNumber);
-                        _dataFile.Read(page);
+                        GetPageLocation(update.PageNumber, out filePageNumber, out fileIndex);
+                        _dataFiles[fileIndex].Read(filePageNumber, page.Data);
                     }
 
                     update.Data.CopyTo(page.Data, update.Offset);
@@ -171,11 +191,12 @@ namespace RestDB.FileLayer.FileSets
 
                 if (page != null)
                 {
-                    _dataFile.Write(page);
+                    GetPageLocation(page.PageNumber, out filePageNumber, out fileIndex);
+                    _dataFiles[fileIndex].Write(filePageNumber, page.Data);
                     page.Dispose();
                 }
 
-                _logFile.CommitComplete(transactionDetail.LogFileOffset);
+                _logFiles[transactionDetail.LogFileIndex].CommitComplete(transactionDetail.LogFileOffset);
             });
 
             return task;
@@ -187,9 +208,22 @@ namespace RestDB.FileLayer.FileSets
                 _transactions.Remove(transaction);
         }
 
+        private void GetPageLocation(ulong pageNumber, out ulong filePageNumber, out int fileIndex)
+        {
+            var fileCount = (uint)_dataFiles.Length;
+            fileIndex = (int)(pageNumber % fileCount);
+            filePageNumber = pageNumber / fileCount;
+        }
+
+        private int NextLogFileIndex()
+        {
+            return _logFileRoundRobin = (_logFileRoundRobin + 1) % _logFiles.Length;
+        }
+
         private class TransactionDetail
         {
             public List<PageUpdate> PendingUpdates;
+            public int LogFileIndex;
             public ulong LogFileOffset;
         }
     }

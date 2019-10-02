@@ -17,28 +17,32 @@ namespace RestDB.UnitTests.Mocks.FileLayer
             mock.Setup(o => o.PageSize)
                 .Returns(_pageSize);
 
-            mock.Setup(o => o.Write(It.IsAny<IPage>()))
-                .Returns<IPage>(page =>
+            mock.Setup(o => o.Write(It.IsAny<ulong>(), It.IsAny<byte[]>(), It.IsAny<uint>()))
+                .Returns<ulong, byte[], uint>((pageNumber, data, offset) =>
                 {
-                    var data = new byte[_pageSize];
-                    page.Data.CopyTo(data, 0);
-                    _pages[page.PageNumber] = data;
+                    byte[] pageData;
+                    if (!_pages.TryGetValue(pageNumber, out pageData))
+                    {
+                        pageData = new byte[_pageSize];
+                        pageData.Initialize();
+                        _pages[pageNumber] = pageData;
+                    }
+
+                    data.CopyTo(pageData, offset);
                     return true;
                 });
 
-            mock.Setup(o => o.Read(It.IsAny<IPage>()))
-                .Returns<IPage>(page =>
+            mock.Setup(o => o.Read(It.IsAny<ulong>(), It.IsAny<byte[]>(), It.IsAny<uint>()))
+                .Returns<ulong, byte[], uint>((pageNumber, data, offset) =>
                 {
-                    byte[] data;
-                    if (_pages.TryGetValue(page.PageNumber, out data))
-                    {
-                        data.CopyTo(page.Data, 0);
-                        return true;
-                    }
-                    else
-                    {
+                    byte[] pageData;
+                    if (!_pages.TryGetValue(pageNumber, out pageData))
                         return false;
-                    }
+
+                    for (var i = 0; i < data.Length; i++)
+                        data[i] = pageData[i + offset];
+
+                    return true;
                 });
         }
     }

@@ -14,9 +14,9 @@ namespace RestDB.FileLayer.FileSets
             _pagePoolFactory = pagePoolFactory;
         }
 
-        IFileSet IFileSetFactory.Open(IDataFile dataFile, ILogFile logFile)
+        IFileSet IFileSetFactory.Open(IEnumerable<IDataFile> dataFiles, IEnumerable<ILogFile> logFiles)
         {
-            return new FileSet(dataFile, logFile, _pagePoolFactory);
+            return new FileSet(dataFiles, logFiles, _pagePoolFactory);
         }
     }
 }

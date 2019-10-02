@@ -17,13 +17,13 @@ namespace RestDB.Interfaces.FileLayer
         /// Tries to write data into the file
         /// </summary>
         /// <returns>True if the write operation succeeded</returns>
-        bool Write(IPage page);
+        bool Write(ulong pageNumber, byte[] data, uint offset = 0);
 
         /// <summary>
         /// Tries to read data from the file
         /// </summary>
         /// <returns>True if the read operation succeeded. If false is
         /// returned then the contents of the page data is undetermined</returns>
-        bool Read(IPage page);
+        bool Read(ulong pageNumber, byte[] data, uint offset = 0);
     }
 }

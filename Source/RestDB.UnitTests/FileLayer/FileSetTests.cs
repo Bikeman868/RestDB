@@ -33,7 +33,10 @@ namespace RestDB.UnitTests.FileLayer
             _dataFileInfo = new FileInfo("C:\\temp\\test.mdf");
             _dataFile = new DataFile(_dataFileInfo, _pageSize);
 
-            _fileSet = new FileSet(_dataFile, _logFile, pagePoolFactory);
+            _fileSet = new FileSet(
+                new IDataFile[] { _dataFile }, 
+                new ILogFile[] { _logFile }, 
+                pagePoolFactory);
         }
 
         [TearDown]
@@ -104,6 +107,8 @@ namespace RestDB.UnitTests.FileLayer
             Assert.AreEqual(5, newPage.Data[20]);
             Assert.AreEqual(6, newPage.Data[21]);
             Assert.AreEqual(7, newPage.Data[22]);
+
+            // Anyone with a reference to the original page should not see any change
 
             Assert.AreEqual(0, originalPage.Data[20]);
             Assert.AreEqual(0, originalPage.Data[21]);

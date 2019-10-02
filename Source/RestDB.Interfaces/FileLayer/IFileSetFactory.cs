@@ -1,4 +1,6 @@
-﻿namespace RestDB.Interfaces.FileLayer
+﻿using System.Collections.Generic;
+
+namespace RestDB.Interfaces.FileLayer
 {
     /// <summary>
     /// Constructs objects that wraps a pair of files that together provide recoverable write operations.
@@ -9,8 +11,8 @@
         /// Opens a pair of files that contain the data and log information
         /// for a page store
         /// </summary>
-        /// <param name="dataFile">The file that holds the data records</param>
-        /// <param name="logFile">The file that holds the transaction log</param>
-        IFileSet Open(IDataFile dataFile, ILogFile logFile);
+        /// <param name="dataFiles">The files that hold the data records</param>
+        /// <param name="logFiles">The files that holds the transaction log</param>
+        IFileSet Open(IEnumerable<IDataFile> dataFiles, IEnumerable<ILogFile> logFiles);
     }
 }

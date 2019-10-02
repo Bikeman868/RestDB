@@ -31,13 +31,8 @@ namespace RestDB.UnitTests.FileLayer
         {
             Assert.AreEqual(_pageSize, _dataFile.PageSize);
 
-            var page = new Page
-            {
-                PageNumber = 0,
-                Data = new byte[_pageSize]
-            };
-
-            Assert.IsFalse(_dataFile.Read(page));
+            var data = new byte[_pageSize];
+            Assert.IsFalse(_dataFile.Read(0, data));
         }
 
         [Test]
@@ -47,14 +42,9 @@ namespace RestDB.UnitTests.FileLayer
 
             for (var pageNumber = 0; pageNumber < 5; pageNumber++)
             {
-                var page = new Page
-                {
-                    PageNumber = (ulong)pageNumber,
-                    Data = new byte[_pageSize]
-                };
-
-                page.Data[0] = (byte)(pageNumber * 3);
-                Assert.IsTrue(_dataFile.Write(page));
+                var data = new byte[_pageSize];
+                data[0] = (byte)(pageNumber * 3);
+                Assert.IsTrue(_dataFile.Write((ulong)pageNumber, data));
             }
 
             _dataFile.Dispose();
@@ -65,29 +55,9 @@ namespace RestDB.UnitTests.FileLayer
 
             for (var pageNumber = 0; pageNumber < 5; pageNumber++)
             {
-                var page = new Page
-                {
-                    PageNumber = (ulong)pageNumber,
-                    Data = new byte[_pageSize]
-                };
-                Assert.IsTrue(_dataFile.Read(page));
-                Assert.AreEqual((byte)(pageNumber * 3), page.Data[0]);
-            }
-        }
-
-        private class Page : IPage
-        {
-            public ulong PageNumber { get; set; }
-
-            public byte[] Data { get; set; }
-
-            public void Dispose()
-            {
-            }
-
-            public IPage Reference()
-            {
-                return this;
+                var data = new byte[_pageSize];
+                Assert.IsTrue(_dataFile.Read((ulong)pageNumber, data));
+                Assert.AreEqual((byte)(pageNumber * 3), data[0]);
             }
         }
     }

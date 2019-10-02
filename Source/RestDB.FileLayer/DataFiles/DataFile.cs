@@ -44,14 +44,14 @@ namespace RestDB.FileLayer.DataFiles
             _versionDataFile.Dispose();
         }
 
-        bool IDataFile.Read(IPage page)
+        bool IDataFile.Read(ulong pageNumber, byte[] data, uint offset)
         {
-            return _versionDataFile.Read(page);
+            return _versionDataFile.Read(pageNumber, data, offset);
         }
 
-        bool IDataFile.Write(IPage page)
+        bool IDataFile.Write(ulong pageNumber, byte[] data, uint offset)
         {
-            return _versionDataFile.Write(page);
+            return _versionDataFile.Write(pageNumber, data, offset);
         }
     }
 }
