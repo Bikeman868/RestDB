@@ -83,6 +83,8 @@ namespace RestDB.UnitTests.Mocks.DatabaseLayer
 
             public void CommitTransaction(ITransaction transaction)
             {
+                _version++;
+                transaction.CommitVersionNumber = _version;
             }
 
             public void DeleteDataType(IDataType dataType)

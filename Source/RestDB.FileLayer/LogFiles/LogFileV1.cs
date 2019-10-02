@@ -143,6 +143,15 @@ namespace RestDB.FileLayer.LogFiles
             }
         }
 
+        void ILogFile.RolledBack(ulong offset)
+        {
+            lock (_lock)
+            {
+                _fileStream.Seek((long)offset + 12, SeekOrigin.Begin);
+                _fileStream.WriteByte((byte)LogEntryStatus.RolledBack);
+            }
+        }
+
         ulong ILogFile.ReadNext(ulong offset, out LogEntryStatus status, out ulong versionNumber, out uint updateCount, out ulong updateSize)
         {
             if (offset == 0UL) offset = 4UL;

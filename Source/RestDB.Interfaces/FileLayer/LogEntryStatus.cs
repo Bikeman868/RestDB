@@ -31,6 +31,12 @@
         /// The data was written to the log file and this data file. The changes
         /// may or may not have been applied to the other data files.
         /// </summary>
-        CompleteThis
+        CompleteThis,
+
+        /// <summary>
+        /// This transaction was not written to other file set log files and
+        /// could not be rolled forward on restart. It was therefore rolled back
+        /// </summary>
+        RolledBack
     }
 }

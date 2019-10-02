@@ -1,6 +1,7 @@
 ﻿using RestDB.Interfaces.DatabaseLayer;
 using RestDB.Interfaces.FileLayer;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -85,14 +86,62 @@ namespace RestDB.FileLayer.FileSets
 
         void IFileSet.RollForward(IEnumerable<ulong> versionNumbers)
         {
-            // TODO: implement resillience
-            throw new NotImplementedException();
+            var rollForwardList = new HashSet<ulong>(versionNumbers);
+            if (rollForwardList.Count == 0) return;
+
+            foreach (var logFile in _logFiles)
+            {
+                var offset = 0UL;
+                do
+                {
+                    LogEntryStatus status;
+                    ulong version;
+                    uint count;
+                    ulong size;
+                    var next = logFile.ReadNext(offset, out status, out version, out count, out size);
+
+                    if (status != LogEntryStatus.Eof && count > 0 && rollForwardList.Contains(version))
+                    {
+                        var updates = logFile.GetUpdates(offset);
+                        if (updates == null) continue;
+
+                        foreach (var update in updates)
+                        {
+                            ulong filePageNumber;
+                            int fileIndex;
+                            GetPageLocation(update.PageNumber, out filePageNumber, out fileIndex);
+
+                            _dataFiles[fileIndex].Write(filePageNumber, update.Data, update.Offset);
+                        }
+                    }
+
+                    offset = status == LogEntryStatus.Eof ? 0UL : next;
+                } while (offset > 0);
+            }
         }
 
         void IFileSet.RollBack(IEnumerable<ulong> versionNumbers)
         {
-            // TODO: implement resillience
-            throw new NotImplementedException();
+            var rollBackList = new HashSet<ulong>(versionNumbers);
+            if (rollBackList.Count == 0) return;
+
+            foreach (var logFile in _logFiles)
+            {
+                var offset = 0UL;
+                do
+                {
+                    LogEntryStatus status;
+                    ulong version;
+                    uint count;
+                    ulong size;
+                    var next = logFile.ReadNext(offset, out status, out version, out count, out size);
+
+                    if (status != LogEntryStatus.Eof && rollBackList.Contains(version))
+                        logFile.RolledBack(offset);
+
+                    offset = status == LogEntryStatus.Eof ? 0UL : next;
+                } while (offset > 0);
+            }
         }
 
         bool IFileSet.Read(IPage page)

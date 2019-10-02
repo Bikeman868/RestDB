@@ -53,6 +53,13 @@ namespace RestDB.Interfaces.FileLayer
         void CommitComplete(ulong offset);
 
         /// <summary>
+        /// This is called when a transaction can not be recovered on restart after a crash
+        /// and had to be rolled back. These log entries can be purged when the log file is shrunk
+        /// </summary>
+        /// <param name="offset">You obtain this offset by calling the CommitStart() method</param>
+        void RolledBack(ulong offset);
+
+        /// <summary>
         /// Skips to the next log file entry and reads the header only
         /// </summary>
         /// <param name="offset">The offset to start reading from. Pass 0 for the first

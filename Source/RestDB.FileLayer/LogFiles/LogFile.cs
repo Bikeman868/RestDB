@@ -72,6 +72,11 @@ namespace RestDB.FileLayer.LogFiles
             _versionLogFile.CommitLogged(offset);
         }
 
+        void ILogFile.RolledBack(ulong offset)
+        {
+            _versionLogFile.RolledBack(offset);
+        }
+
         List<PageUpdate> ILogFile.GetUpdates(ulong offset)
         {
             return _versionLogFile.GetUpdates(offset);
