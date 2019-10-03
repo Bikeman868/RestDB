@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using Moq.Modules;
 using NUnit.Framework;
 using RestDB.FileLayer.LogFiles;
@@ -25,6 +26,7 @@ namespace RestDB.UnitTests.FileLayer
         [TearDown]
         public void TearDown()
         {
+            Console.WriteLine();
             if (_logFile != null)
                 _logFile.Dispose();
         }

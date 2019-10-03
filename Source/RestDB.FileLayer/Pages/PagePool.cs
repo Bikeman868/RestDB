@@ -1,4 +1,5 @@
 ﻿using OwinFramework.Utility.Containers;
+using RestDB.Interfaces;
 using RestDB.Interfaces.FileLayer;
 using System;
 using System.Text;
@@ -12,10 +13,17 @@ namespace RestDB.FileLayer.Pages
 
         uint IPagePool.PageSize => _pageSize;
 
-        public PagePool(uint pageSize)
+        public PagePool(uint pageSize, IStartUpLog startUpLog)
         {
+            startUpLog.Write("Creating a page pool for " + pageSize + " byte pages");
+
             _pageSize = pageSize;
             _pages = new LinkedList<Page>();
+        }
+
+        public override string ToString()
+        {
+            return "page pool for " + _pageSize + " byte pages";
         }
 
         IPage IPagePool.Get(ulong pageNumber, bool clear)

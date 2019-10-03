@@ -1,4 +1,5 @@
 ﻿using RestDB.Interfaces.DatabaseLayer;
+using System;
 using System.Collections.Generic;
 
 namespace RestDB.Interfaces.FileLayer
@@ -9,7 +10,7 @@ namespace RestDB.Interfaces.FileLayer
     /// kept so that transactions can have a static view of the data for
     /// transaction isolation.
     /// </summary>
-    public interface IVersionedPageCache
+    public interface IVersionedPageCache: IDisposable
     {
         /// <summary>
         /// Tells the page cache that a new transaction has started and that
@@ -22,7 +23,12 @@ namespace RestDB.Interfaces.FileLayer
         /// Ends the transaction applying all changes to the underlying file system
         /// and discarding the cached pending writes associated with this transaction
         /// </summary>
-        IVersionedPageCache EndTransaction(ITransaction transaction);
+        IVersionedPageCache CommitTransaction(ITransaction transaction);
+
+        /// <summary>
+        /// Ends the transaction discarding all changes to the underlying file system
+        /// </summary>
+        IVersionedPageCache RollbackTransaction(ITransaction transaction);
 
         /// <summary>
         /// Retrieves a page from cache or backing store within the context
@@ -33,7 +39,7 @@ namespace RestDB.Interfaces.FileLayer
         /// <param name="transaction">The transaction context</param>
         /// <returns>A page from the cache or null if there is no such page.
         /// The page must have Dispose() called when doe accessing it</returns>
-        IPage Get(ulong pageNumber, ITransaction transaction);
+        IPage Get(ITransaction transaction, ulong pageNumber);
 
         /// <summary>
         /// Updates a page within the context of a transaction. Only this transaction

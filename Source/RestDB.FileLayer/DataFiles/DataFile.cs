@@ -70,5 +70,10 @@ namespace RestDB.FileLayer.DataFiles
         {
             return _versionDataFile.Write(pageNumber, data, offset);
         }
+
+        public override string ToString()
+        {
+            return "data file " + _file.FullName;
+        }
     }
 }

@@ -50,6 +50,7 @@ namespace RestDB.UnitTests.FileLayer
         [TearDown]
         public void TearDown()
         {
+            Console.WriteLine();
             if (_fileSet != null)
                 _fileSet.Dispose();
         }

@@ -1,4 +1,5 @@
-﻿using RestDB.Interfaces.FileLayer;
+﻿using RestDB.Interfaces;
+using RestDB.Interfaces.FileLayer;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -9,6 +10,8 @@ namespace RestDB.FileLayer.Pages
     internal class PageStore : IPageStore
     {
         private readonly IVersionedPageCache _pageCache;
+        private readonly IStartUpLog _startUpLog;
+
         private readonly IDictionary<ushort, ulong> _indexPages;
         private readonly IPage _indexHead;
         private readonly IPage _freePageHead;
@@ -17,21 +20,25 @@ namespace RestDB.FileLayer.Pages
 
         IVersionedPageCache IPageStore.Pages => _pageCache;
 
-        public PageStore(IVersionedPageCache pageCache)
+        public PageStore(IVersionedPageCache pageCache, IStartUpLog startUpLog)
         {
             _pageCache = pageCache;
+            _startUpLog = startUpLog;
             _indexPages = new Dictionary<ushort, ulong>();
 
             // The index master page is always page 0
             // This page contains the starting page numbers for other indexes
-            _indexHead = _pageCache.Get(0, null);
+            _indexHead = _pageCache.Get(null, 0);
 
             if (_indexHead == null)
             {
+                startUpLog.Write("Creating a new page store in a set of empty data files from " + _pageCache);
                 _indexHead = _pageCache.NewPage(0);
             }
             else
             {
+                startUpLog.Write("Opening a page store on " + _pageCache);
+
                 var offset = 0;
                 ushort objectType;
                 ulong startPage;
@@ -40,9 +47,11 @@ namespace RestDB.FileLayer.Pages
                     objectType = BitConverter.ToUInt16(_indexHead.Data, offset);
                     startPage = BitConverter.ToUInt64(_indexHead.Data, offset + 2);
                     if (objectType > 0)
+                    {
+                        startUpLog.Write("- the index for type " + objectType + " objects starts at page " + startPage);
                         _indexPages[objectType] = startPage;
-                    else
-                        break;
+                    }
+                    else break;
                     offset += 10;
                 } while (offset < _indexHead.Data.Length);
             }
@@ -50,10 +59,12 @@ namespace RestDB.FileLayer.Pages
             // The free page map is always page 1
             // This is the first in a chain of pages used to manage 
             // unused space in the file set
-            _freePageHead = _pageCache.Get(1, null);
+            _freePageHead = _pageCache.Get(null, 1);
 
             if (_freePageHead == null)
             {
+                startUpLog.Write("Initializing a new free page map in this page store");
+
                 _freePageHead = _pageCache.NewPage(1);
                 _highestPageNumber = 1;
 
@@ -69,7 +80,13 @@ namespace RestDB.FileLayer.Pages
             else
             {
                 _highestPageNumber = (long)BitConverter.ToUInt64(_freePageHead.Data, 0);
+                startUpLog.Write("This file set contains " + _highestPageNumber + " pages");
             }
+        }
+
+        public override string ToString()
+        {
+            return "page store on " + _pageCache;
         }
 
         IPage IPageStore.Allocate()
@@ -78,7 +95,7 @@ namespace RestDB.FileLayer.Pages
 
             // TODO: ...
 
-            return null;
+            return _pageCache.NewPage(pageNumber);
         }
 
         IPage IPageStore.GetFirstIndexPage(ushort objectType)
@@ -120,7 +137,7 @@ namespace RestDB.FileLayer.Pages
                 }
             }
 
-            return _pageCache.Get(pageNumber, null);
+            return _pageCache.Get(null, pageNumber);
         }
 
         void IPageStore.Release(ulong pageNumber)

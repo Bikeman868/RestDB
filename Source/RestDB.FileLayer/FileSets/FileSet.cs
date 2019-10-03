@@ -1,11 +1,8 @@
 ﻿using RestDB.Interfaces;
 using RestDB.Interfaces.DatabaseLayer;
 using RestDB.Interfaces.FileLayer;
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace RestDB.FileLayer.FileSets
@@ -36,7 +33,11 @@ namespace RestDB.FileLayer.FileSets
             if (_dataFiles.Length < 1) throw new FileLayerException("You must have at least 1 data file");
             if (_logFiles.Length < 1) throw new FileLayerException("You must have at least 1 log file");
 
-            startUpLog.Write("Data file page sizes " + string.Join(", ", _dataFiles.Select(df => df.PageSize)));
+            foreach (var dataFile in _dataFiles)
+                startUpLog.Write("- " + dataFile);
+
+            foreach (var logFile in _logFiles)
+                startUpLog.Write("- " + logFile);
 
             _pageSize = _dataFiles[0].PageSize;
             if (_dataFiles.Any(df => df.PageSize != _pageSize))
@@ -63,8 +64,20 @@ namespace RestDB.FileLayer.FileSets
             // TODO: Wait for background thread
 
             _startUpLog.Write("Closing file set files");
+
+            foreach (var dataFile in _dataFiles)
+                _startUpLog.Write("- " + dataFile);
+
+            foreach (var logFile in _logFiles)
+                _startUpLog.Write("- " + logFile);
+
             foreach (var logFile in _logFiles) logFile.Dispose();
             foreach(var dataFile in _dataFiles) dataFile.Dispose();
+        }
+
+        public override string ToString()
+        {
+            return "file set with page size " + _pageSize + " stored in " + _dataFiles.Length + " data files and " + _logFiles.Length + " log files";
         }
 
         uint IFileSet.PageSize => _pageSize;

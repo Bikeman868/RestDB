@@ -20,6 +20,11 @@ namespace RestDB.FileLayer.Pages
             _dispose = dispose;
         }
 
+        public override string ToString()
+        {
+            return "page " + _pageNumber + " containing " + _data.Length + " bytes";
+        }
+
         public IPage Initialize(ulong pageNumber, bool clear)
         {
             _pageNumber = pageNumber;

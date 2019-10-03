@@ -1,4 +1,5 @@
-﻿using RestDB.Interfaces.DatabaseLayer;
+﻿using RestDB.Interfaces;
+using RestDB.Interfaces.DatabaseLayer;
 using RestDB.Interfaces.FileLayer;
 using System;
 using System.Collections.Generic;
@@ -23,19 +24,38 @@ namespace RestDB.FileLayer.Pages
 
     internal class VersionedPageCache : IVersionedPageCache
     {
+        readonly IStartUpLog _startUpLog;
         readonly IFileSet _fileSet;
         readonly IPagePool _pagePool;
         readonly IDictionary<ulong, VersionHead> _versions;
         readonly IDictionary<ulong, TransactionHead> _transactions;
         readonly IDictionary<ulong, PageHead> _pages;
 
-        public VersionedPageCache(IFileSet fileSet, IPagePoolFactory pagePoolFactory)
+        public VersionedPageCache(
+            IFileSet fileSet, 
+            IPagePoolFactory pagePoolFactory, 
+            IStartUpLog startUpLog)
         {
+            _startUpLog = startUpLog;
             _fileSet = fileSet;
             _versions = new Dictionary<ulong, VersionHead>();
             _transactions = new Dictionary<ulong, TransactionHead>();
             _pages = new Dictionary<ulong, PageHead>();
+
+            startUpLog.Write("Creating a new page cache for " + _fileSet);
+
             _pagePool = pagePoolFactory.Create(fileSet.PageSize);
+        }
+
+        public void Dispose()
+        {
+            _startUpLog.Write("Closing page cache for " + _fileSet);
+            _fileSet.Dispose();
+        }
+
+        public override string ToString()
+        {
+            return "page cache on " + _fileSet;
         }
 
         IVersionedPageCache IVersionedPageCache.BeginTransaction(ITransaction transaction)
@@ -69,12 +89,17 @@ namespace RestDB.FileLayer.Pages
             return this;
         }
 
-        IVersionedPageCache IVersionedPageCache.EndTransaction(ITransaction transaction)
+        IVersionedPageCache IVersionedPageCache.CommitTransaction(ITransaction transaction)
         {
             throw new NotImplementedException();
         }
 
-        IPage IVersionedPageCache.Get(ulong pageNumber, ITransaction transaction)
+        IVersionedPageCache IVersionedPageCache.RollbackTransaction(ITransaction transaction)
+        {
+            throw new NotImplementedException();
+        }
+
+        IPage IVersionedPageCache.Get(ITransaction transaction, ulong pageNumber)
         {
             PageHead pageHead;
             lock (_pages)

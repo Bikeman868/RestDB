@@ -104,5 +104,10 @@ namespace RestDB.FileLayer.LogFiles
         {
             return _versionLogFile.ReadNext(offset, out status, out versionNumber, out updateCount, out updateSize);
         }
+
+        public override string ToString()
+        {
+            return "log file " + _file.FullName;
+        }
     }
 }
