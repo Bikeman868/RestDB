@@ -2,12 +2,14 @@
 using Moq.Modules;
 using NUnit.Framework;
 using RestDB.FileLayer.DataFiles;
+using RestDB.Interfaces;
 using RestDB.Interfaces.FileLayer;
 
 namespace RestDB.UnitTests.FileLayer
 {
     public class DataFileTests : TestBase
     {
+        IStartUpLog _startupLog;
         FileInfo _file;
         IDataFile _dataFile;
         uint _pageSize = 32;
@@ -15,8 +17,9 @@ namespace RestDB.UnitTests.FileLayer
         [SetUp]
         public void Setup()
         {
+            _startupLog = SetupMock<IStartUpLog>();
             _file = new FileInfo("C:\\temp\\test.mdf");
-            _dataFile = new DataFile(_file, _pageSize);
+            _dataFile = new DataFile(_file, _pageSize, _startupLog);
         }
 
         [TearDown]
@@ -33,7 +36,7 @@ namespace RestDB.UnitTests.FileLayer
 
             _dataFile.Dispose();
 
-            _dataFile = new DataFile(_file);
+            _dataFile = new DataFile(_file, _startupLog);
 
             Assert.AreEqual(_pageSize, _dataFile.PageSize);
         }
@@ -57,7 +60,7 @@ namespace RestDB.UnitTests.FileLayer
 
             _dataFile.Dispose();
 
-            _dataFile = new DataFile(_file);
+            _dataFile = new DataFile(_file, _startupLog);
 
             Assert.AreEqual(_pageSize, _dataFile.PageSize);
 
@@ -84,7 +87,7 @@ namespace RestDB.UnitTests.FileLayer
 
             _dataFile.Dispose();
 
-            _dataFile = new DataFile(_file);
+            _dataFile = new DataFile(_file, _startupLog);
 
             for (var pageNumber = 0; pageNumber < 5; pageNumber++)
             {

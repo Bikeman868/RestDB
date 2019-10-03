@@ -2,6 +2,7 @@
 using Moq.Modules;
 using NUnit.Framework;
 using RestDB.FileLayer.LogFiles;
+using RestDB.Interfaces;
 using RestDB.Interfaces.DatabaseLayer;
 using RestDB.Interfaces.FileLayer;
 
@@ -9,14 +10,16 @@ namespace RestDB.UnitTests.FileLayer
 {
     public class LogFileTests : TestBase
     {
+        IStartUpLog _startupLog;
         FileInfo _file;
         ILogFile _logFile;
 
         [SetUp]
         public void Setup()
         {
+            _startupLog = SetupMock<IStartUpLog>();
             _file = new FileInfo("C:\\temp\\test.ldf");
-            _logFile = new LogFile(_file, true);
+            _logFile = new LogFile(_file, true, _startupLog);
         }
 
         [TearDown]
@@ -46,7 +49,7 @@ namespace RestDB.UnitTests.FileLayer
 
             _logFile.Dispose();
 
-            _logFile = new LogFile(_file, false);
+            _logFile = new LogFile(_file, false, _startupLog);
 
             LogEntryStatus status;
             ulong versionNumber;
@@ -117,7 +120,7 @@ namespace RestDB.UnitTests.FileLayer
 
             _logFile.Dispose();
 
-            _logFile = new LogFile(_file, false);
+            _logFile = new LogFile(_file, false, _startupLog);
 
             LogEntryStatus status;
             ulong versionNumber;

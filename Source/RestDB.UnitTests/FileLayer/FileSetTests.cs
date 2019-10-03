@@ -3,6 +3,7 @@ using NUnit.Framework;
 using RestDB.FileLayer.DataFiles;
 using RestDB.FileLayer.FileSets;
 using RestDB.FileLayer.LogFiles;
+using RestDB.Interfaces;
 using RestDB.Interfaces.DatabaseLayer;
 using RestDB.Interfaces.FileLayer;
 using System;
@@ -18,6 +19,7 @@ namespace RestDB.UnitTests.FileLayer
 
         IPagePoolFactory _pagePoolFactory;
         IPagePool _pagePool;
+        IStartUpLog _startUpLog;
 
         FileInfo _logFileInfo1;
         FileInfo _logFileInfo2;
@@ -32,6 +34,7 @@ namespace RestDB.UnitTests.FileLayer
         [SetUp]
         public void SetUp()
         {
+            _startUpLog = SetupMock<IStartUpLog>();
             _pagePoolFactory = SetupMock<IPagePoolFactory>();
             _pagePool = _pagePoolFactory.Create(_pageSize);
 
@@ -55,9 +58,10 @@ namespace RestDB.UnitTests.FileLayer
         public void should_write_directly_to_data()
         {
             _fileSet = new FileSet(
-                new IDataFile[] { new DataFile(_dataFileInfo1, _pageSize) },
-                new ILogFile[] { new LogFile(_logFileInfo1, true) },
-                _pagePoolFactory);
+                new IDataFile[] { new DataFile(_dataFileInfo1, _pageSize, _startUpLog) },
+                new ILogFile[] { new LogFile(_logFileInfo1, true, _startUpLog) },
+                _pagePoolFactory,
+                _startUpLog);
 
             _fileSet.Write(
                 null,
@@ -83,9 +87,10 @@ namespace RestDB.UnitTests.FileLayer
         public void should_write_within_transaction()
         {
             _fileSet = new FileSet(
-                new IDataFile[] { new DataFile(_dataFileInfo1, _pageSize) },
-                new ILogFile[] { new LogFile(_logFileInfo1, true) },
-                _pagePoolFactory);
+                new IDataFile[] { new DataFile(_dataFileInfo1, _pageSize, _startUpLog) },
+                new ILogFile[] { new LogFile(_logFileInfo1, true, _startUpLog) },
+                _pagePoolFactory,
+                _startUpLog);
 
             var databaseFactory = SetupMock<IDatabaseFactory>();
             var pageStoreFactory = SetupMock<IPageStoreFactory>();
@@ -140,9 +145,10 @@ namespace RestDB.UnitTests.FileLayer
         public void should_write_multiple_files_within_transaction()
         {
             _fileSet = new FileSet(
-                new IDataFile[] { new DataFile(_dataFileInfo1, _pageSize), new DataFile(_dataFileInfo2, _pageSize) },
-                new ILogFile[] { new LogFile(_logFileInfo1, true), new LogFile(_logFileInfo2, true) },
-                _pagePoolFactory);
+                new IDataFile[] { new DataFile(_dataFileInfo1, _pageSize, _startUpLog), new DataFile(_dataFileInfo2, _pageSize, _startUpLog) },
+                new ILogFile[] { new LogFile(_logFileInfo1, true, _startUpLog), new LogFile(_logFileInfo2, true, _startUpLog) },
+                _pagePoolFactory,
+                _startUpLog);
 
             var databaseFactory = SetupMock<IDatabaseFactory>();
             var pageStoreFactory = SetupMock<IPageStoreFactory>();
@@ -244,9 +250,10 @@ namespace RestDB.UnitTests.FileLayer
         public void should_roll_forward_committed_transactions_on_restart()
         {
             _fileSet = new FileSet(
-                new IDataFile[] { new DataFile(_dataFileInfo1, _pageSize), new DataFile(_dataFileInfo2, _pageSize) },
-                new ILogFile[] { new LogFile(_logFileInfo1, true), new LogFile(_logFileInfo2, true) },
-                _pagePoolFactory);
+                new IDataFile[] { new DataFile(_dataFileInfo1, _pageSize, _startUpLog), new DataFile(_dataFileInfo2, _pageSize, _startUpLog) },
+                new ILogFile[] { new LogFile(_logFileInfo1, true, _startUpLog), new LogFile(_logFileInfo2, true, _startUpLog) },
+                _pagePoolFactory,
+                _startUpLog);
 
             var databaseFactory = SetupMock<IDatabaseFactory>();
             var pageStoreFactory = SetupMock<IPageStoreFactory>();
@@ -324,9 +331,10 @@ namespace RestDB.UnitTests.FileLayer
             // Reopen all of the files
 
             _fileSet = new FileSet(
-                new IDataFile[] { new DataFile(_dataFileInfo1), new DataFile(_dataFileInfo2) },
-                new ILogFile[] { new LogFile(_logFileInfo1, false), new LogFile(_logFileInfo2, false) },
-                _pagePoolFactory);
+                new IDataFile[] { new DataFile(_dataFileInfo1, _startUpLog), new DataFile(_dataFileInfo2, _startUpLog) },
+                new ILogFile[] { new LogFile(_logFileInfo1, false, _startUpLog), new LogFile(_logFileInfo2, false, _startUpLog) },
+                _pagePoolFactory,
+                _startUpLog);
 
             // Roll forward committed transactions
 
@@ -370,9 +378,10 @@ namespace RestDB.UnitTests.FileLayer
         public void should_roll_back_uncommitted_transactions_on_restart()
         {
             _fileSet = new FileSet(
-                new IDataFile[] { new DataFile(_dataFileInfo1, _pageSize), new DataFile(_dataFileInfo2, _pageSize) },
-                new ILogFile[] { new LogFile(_logFileInfo1, true), new LogFile(_logFileInfo2, true) },
-                _pagePoolFactory);
+                new IDataFile[] { new DataFile(_dataFileInfo1, _pageSize, _startUpLog), new DataFile(_dataFileInfo2, _pageSize, _startUpLog) },
+                new ILogFile[] { new LogFile(_logFileInfo1, true, _startUpLog), new LogFile(_logFileInfo2, true, _startUpLog) },
+                _pagePoolFactory,
+                _startUpLog);
 
             var databaseFactory = SetupMock<IDatabaseFactory>();
             var pageStoreFactory = SetupMock<IPageStoreFactory>();
@@ -450,9 +459,10 @@ namespace RestDB.UnitTests.FileLayer
             // Reopen all of the files
 
             _fileSet = new FileSet(
-                new IDataFile[] { new DataFile(_dataFileInfo1), new DataFile(_dataFileInfo2) },
-                new ILogFile[] { new LogFile(_logFileInfo1, false), new LogFile(_logFileInfo2, false) },
-                _pagePoolFactory);
+                new IDataFile[] { new DataFile(_dataFileInfo1, _startUpLog), new DataFile(_dataFileInfo2, _startUpLog) },
+                new ILogFile[] { new LogFile(_logFileInfo1, false, _startUpLog), new LogFile(_logFileInfo2, false, _startUpLog) },
+                _pagePoolFactory,
+                _startUpLog);
 
             // Roll back all transactions
 

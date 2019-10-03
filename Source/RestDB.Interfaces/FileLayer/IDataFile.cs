@@ -14,13 +14,15 @@ namespace RestDB.Interfaces.FileLayer
         uint PageSize { get; }
 
         /// <summary>
-        /// Tries to write data into the file
+        /// Tries to write data into the file. Uses locks to only allow
+        /// one thread at a time to write to the file
         /// </summary>
         /// <returns>True if the write operation succeeded</returns>
         bool Write(ulong pageNumber, byte[] data, uint offset = 0);
 
         /// <summary>
-        /// Tries to read data from the file
+        /// Tries to read data from the file. Uses locks to only allow
+        /// one thread at a time to access the file
         /// </summary>
         /// <returns>True if the read operation succeeded. If false is
         /// returned then the contents of the page data is undetermined</returns>

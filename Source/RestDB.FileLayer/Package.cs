@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Ioc.Modules;
+using RestDB.Interfaces;
 using RestDB.Interfaces.FileLayer;
 
 [assembly: InternalsVisibleTo("RestDB.UnitTests")]
@@ -15,11 +16,19 @@ namespace RestDB.FileLayer
             get
             {
                 var r = new List<IocRegistration>();
+
+                // Interfaces implemented in this library
+
                 r.Add(new IocRegistration().Init<IDataFileFactory, DataFiles.DataFileFactory>());
                 r.Add(new IocRegistration().Init<ILogFileFactory, LogFiles.LogFileFactory>());
                 r.Add(new IocRegistration().Init<IFileSetFactory, FileSets.FileSetFactory>());
                 r.Add(new IocRegistration().Init<IPagePoolFactory, Pages.PagePoolFactory>());
                 r.Add(new IocRegistration().Init<IPageStoreFactory, Pages.PageStoreFactory>());
+
+                // Interface dependencies
+
+                r.Add(new IocRegistration().Init<IStartUpLog>());
+
                 return r;
             }
         }
