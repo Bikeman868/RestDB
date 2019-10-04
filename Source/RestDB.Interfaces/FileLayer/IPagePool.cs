@@ -14,7 +14,9 @@
 
         /// <summary>
         /// Gets an available page from the pool and initializes its page number.
-        /// If the page pool is empty then a new page instance is constructed
+        /// If the page pool is empty then a new page instance is constructed. You
+        /// must dispose of the page when you are done with it to return it back to 
+        /// the pool
         /// </summary>
         /// <param name="pageNumber">Initializes the page number property of the page</param>
         /// <param name="clear">Page true to zero the data in the page</param>

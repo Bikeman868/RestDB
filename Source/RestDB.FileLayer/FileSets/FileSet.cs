@@ -224,6 +224,76 @@ namespace RestDB.FileLayer.FileSets
             return true;
         }
 
+        bool IFileSet.Write(ITransaction transaction, PageUpdate update)
+        {
+            if (transaction == null)
+            {
+                ulong filePageNumber;
+                int fileIndex;
+                GetPageLocation(update.PageNumber, out filePageNumber, out fileIndex);
+
+                return _dataFiles[fileIndex].Write(filePageNumber, update.Data, update.Offset);
+            }
+
+            TransactionDetail transactionDetail;
+            lock (_transactions)
+            {
+                if (!_transactions.TryGetValue(transaction, out transactionDetail))
+                {
+                    transactionDetail = new TransactionDetail
+                    {
+                        PendingUpdates = new List<PageUpdate>()
+                    };
+                    _transactions.Add(transaction, transactionDetail);
+                }
+            }
+
+            lock (transactionDetail)
+                transactionDetail.PendingUpdates.Add(update);
+
+            return true;
+        }
+
+        Task IFileSet.WriteAndCommit(ITransaction transaction, IEnumerable<PageUpdate> updates)
+        {
+            if (transaction == null)
+            {
+                foreach (var update in updates)
+                {
+                    ulong filePageNumber;
+                    int fileIndex;
+                    GetPageLocation(update.PageNumber, out filePageNumber, out fileIndex);
+
+                    if (!_dataFiles[fileIndex].Write(filePageNumber, update.Data, update.Offset))
+                        throw new FileLayerException("Failed to write and commit without a transaction, data file update failed");
+                }
+                return null;
+            }
+
+            TransactionDetail transactionDetail;
+            lock (_transactions)
+            {
+                if (_transactions.TryGetValue(transaction, out transactionDetail))
+                {
+                    transactionDetail.PendingUpdates.AddRange(updates);
+                }
+                else
+                {
+                    transactionDetail = new TransactionDetail
+                    {
+                        PendingUpdates = updates.ToList()
+                    };
+                    _transactions.Add(transaction, transactionDetail);
+                }
+            }
+
+            return Task.Run(() =>
+            {
+                transactionDetail.LogFileIndex = NextLogFileIndex();
+                transactionDetail.LogFileOffset = _logFiles[transactionDetail.LogFileIndex].CommitStart(transaction, transactionDetail.PendingUpdates);
+            });
+        }
+
         Task IFileSet.CommitTransaction(ITransaction transaction)
         {
             TransactionDetail transactionDetail;

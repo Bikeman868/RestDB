@@ -1,6 +1,7 @@
 ﻿using RestDB.Interfaces.DatabaseLayer;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace RestDB.Interfaces.FileLayer
 {
@@ -20,15 +21,29 @@ namespace RestDB.Interfaces.FileLayer
         IVersionedPageCache BeginTransaction(ITransaction transaction);
 
         /// <summary>
-        /// Ends the transaction applying all changes to the underlying file system
+        /// Ends the transaction saving all the changes to the transaction log file
         /// and discarding the cached pending writes associated with this transaction
         /// </summary>
-        IVersionedPageCache CommitTransaction(ITransaction transaction);
+        /// <returns>A task that will complete after the log file has been succesfully
+        /// updated</returns>
+        Task CommitTransaction(ITransaction transaction);
 
         /// <summary>
-        /// Ends the transaction discarding all changes to the underlying file system
+        /// Call this after commiting the the transaction in every page cache. Calling
+        /// this method takes all of the changes that were written to the log file
+        /// and applies them to the data file. At this pointif the system crashes then
+        /// the log file will be applied to the data file again to roll the transaction 
+        /// forward
         /// </summary>
-        IVersionedPageCache RollbackTransaction(ITransaction transaction);
+        /// <returns>A task that will complete after the data file has been succesfully
+        /// updated</returns>
+        Task FinalizeTransaction(ITransaction transaction);
+
+        /// <summary>
+        /// Ends the transaction discarding all changes. Nothing is written to the
+        /// file system in this case.
+        /// </summary>
+        void RollbackTransaction(ITransaction transaction);
 
         /// <summary>
         /// Retrieves a page from cache or backing store within the context

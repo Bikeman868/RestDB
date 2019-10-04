@@ -76,12 +76,14 @@ namespace RestDB.UnitTests.FileLayer
                     },
                     1));
 
-            var page = _pagePool.Get(1);
-            _fileSet.Read(page);
+            using (var page = _pagePool.Get(1))
+            {
+                _fileSet.Read(page);
 
-            Assert.AreEqual(5, page.Data[20]);
-            Assert.AreEqual(6, page.Data[21]);
-            Assert.AreEqual(7, page.Data[22]);
+                Assert.AreEqual(5, page.Data[20]);
+                Assert.AreEqual(6, page.Data[21]);
+                Assert.AreEqual(7, page.Data[22]);
+            }
         }
 
         [Test]
@@ -115,31 +117,35 @@ namespace RestDB.UnitTests.FileLayer
             // Before the transaction is committed the page should be in its
             // original state
 
-            var originalPage = _pagePool.Get(1);
-            _fileSet.Read(originalPage);
+            using (var originalPage = _pagePool.Get(1))
+            {
+                _fileSet.Read(originalPage);
 
-            Assert.AreEqual(0, originalPage.Data[20]);
-            Assert.AreEqual(0, originalPage.Data[21]);
-            Assert.AreEqual(0, originalPage.Data[22]);
+                Assert.AreEqual(0, originalPage.Data[20]);
+                Assert.AreEqual(0, originalPage.Data[21]);
+                Assert.AreEqual(0, originalPage.Data[22]);
 
-            _fileSet.CommitTransaction(transaction).Wait();
-            _fileSet.FinalizeTransaction(transaction).Wait();
+                _fileSet.CommitTransaction(transaction).Wait();
+                _fileSet.FinalizeTransaction(transaction).Wait();
 
-            // After commiting and finalizing the transaction the page should be
-            // changed in the data file
+                // After commiting and finalizing the transaction the page should be
+                // changed in the data file
 
-            var newPage = _pagePool.Get(1);
-            _fileSet.Read(newPage);
+                using (var newPage = _pagePool.Get(1))
+                {
+                    _fileSet.Read(newPage);
 
-            Assert.AreEqual(5, newPage.Data[20]);
-            Assert.AreEqual(6, newPage.Data[21]);
-            Assert.AreEqual(7, newPage.Data[22]);
+                    Assert.AreEqual(5, newPage.Data[20]);
+                    Assert.AreEqual(6, newPage.Data[21]);
+                    Assert.AreEqual(7, newPage.Data[22]);
+                }
 
-            // Anyone with a reference to the original page should not see any change
+                // Anyone with a reference to the original page should not see any change
 
-            Assert.AreEqual(0, originalPage.Data[20]);
-            Assert.AreEqual(0, originalPage.Data[21]);
-            Assert.AreEqual(0, originalPage.Data[22]);
+                Assert.AreEqual(0, originalPage.Data[20]);
+                Assert.AreEqual(0, originalPage.Data[21]);
+                Assert.AreEqual(0, originalPage.Data[22]);
+            }
         }
 
         [Test]
@@ -206,45 +212,49 @@ namespace RestDB.UnitTests.FileLayer
             // Before the transaction is committed the page should be in its
             // original state
 
-            var originalPage = _pagePool.Get(1);
-            _fileSet.Read(originalPage);
+            using (var originalPage = _pagePool.Get(1))
+            {
+                _fileSet.Read(originalPage);
 
-            for (var i = 0; i < _pageSize; i++)
-                Assert.AreEqual(0, originalPage.Data[i]);
+                for (var i = 0; i < _pageSize; i++)
+                    Assert.AreEqual(0, originalPage.Data[i]);
 
-            _fileSet.CommitTransaction(transaction1).Wait();
-            _fileSet.CommitTransaction(transaction2).Wait();
-            _fileSet.CommitTransaction(transaction3).Wait();
-            _fileSet.FinalizeTransaction(transaction1).Wait();
-            _fileSet.FinalizeTransaction(transaction2).Wait();
-            _fileSet.FinalizeTransaction(transaction3).Wait();
+                _fileSet.CommitTransaction(transaction1).Wait();
+                _fileSet.CommitTransaction(transaction2).Wait();
+                _fileSet.CommitTransaction(transaction3).Wait();
+                _fileSet.FinalizeTransaction(transaction1).Wait();
+                _fileSet.FinalizeTransaction(transaction2).Wait();
+                _fileSet.FinalizeTransaction(transaction3).Wait();
 
-            // After commiting and finalizing the transactions the page should be
-            // changed in the data file
+                // After commiting and finalizing the transactions the page should be
+                // changed in the data file
 
-            var newPage = _pagePool.Get(1);
-            _fileSet.Read(newPage);
+                using (var newPage = _pagePool.Get(1))
+                {
+                    _fileSet.Read(newPage);
 
-            Assert.AreEqual(1, newPage.Data[20]);
-            Assert.AreEqual(2, newPage.Data[21]);
-            Assert.AreEqual(3, newPage.Data[22]);
+                    Assert.AreEqual(1, newPage.Data[20]);
+                    Assert.AreEqual(2, newPage.Data[21]);
+                    Assert.AreEqual(3, newPage.Data[22]);
 
-            Assert.AreEqual(4, newPage.Data[25]);
-            Assert.AreEqual(5, newPage.Data[26]);
-            Assert.AreEqual(6, newPage.Data[27]);
+                    Assert.AreEqual(4, newPage.Data[25]);
+                    Assert.AreEqual(5, newPage.Data[26]);
+                    Assert.AreEqual(6, newPage.Data[27]);
 
-            Assert.AreEqual(7, newPage.Data[5]);
-            Assert.AreEqual(8, newPage.Data[6]);
-            Assert.AreEqual(9, newPage.Data[7]);
+                    Assert.AreEqual(7, newPage.Data[5]);
+                    Assert.AreEqual(8, newPage.Data[6]);
+                    Assert.AreEqual(9, newPage.Data[7]);
 
-            Assert.AreEqual(10, newPage.Data[30]);
-            Assert.AreEqual(11, newPage.Data[31]);
-            Assert.AreEqual(12, newPage.Data[32]);
+                    Assert.AreEqual(10, newPage.Data[30]);
+                    Assert.AreEqual(11, newPage.Data[31]);
+                    Assert.AreEqual(12, newPage.Data[32]);
+                }
 
-            // Anyone with a reference to the original page should not see any change
+                // Anyone with a reference to the original page should not see any change
 
-            for (var i = 0; i < _pageSize; i++)
-                Assert.AreEqual(0, originalPage.Data[i]);
+                for (var i = 0; i < _pageSize; i++)
+                    Assert.AreEqual(0, originalPage.Data[i]);
+            }
         }
 
         [Test]
@@ -313,11 +323,13 @@ namespace RestDB.UnitTests.FileLayer
 
             // Before the transaction is committed the page should be in its original state
 
-            var originalPage = _pagePool.Get(1);
-            _fileSet.Read(originalPage);
+            using (var originalPage = _pagePool.Get(1))
+            {
+                _fileSet.Read(originalPage);
 
-            for (var i = 0; i < _pageSize; i++)
-                Assert.AreEqual(0, originalPage.Data[i]);
+                for (var i = 0; i < _pageSize; i++)
+                    Assert.AreEqual(0, originalPage.Data[i]);
+            }
 
             // Commit transactions to the log files but do not update the data files
 
@@ -348,24 +360,26 @@ namespace RestDB.UnitTests.FileLayer
 
             // After rolling forward the page should be changed in the data file
 
-            var newPage = _pagePool.Get(1);
-            _fileSet.Read(newPage);
+            using (var newPage = _pagePool.Get(1))
+            {
+                _fileSet.Read(newPage);
 
-            Assert.AreEqual(1, newPage.Data[20]);
-            Assert.AreEqual(2, newPage.Data[21]);
-            Assert.AreEqual(3, newPage.Data[22]);
+                Assert.AreEqual(1, newPage.Data[20]);
+                Assert.AreEqual(2, newPage.Data[21]);
+                Assert.AreEqual(3, newPage.Data[22]);
 
-            Assert.AreEqual(4, newPage.Data[25]);
-            Assert.AreEqual(5, newPage.Data[26]);
-            Assert.AreEqual(6, newPage.Data[27]);
+                Assert.AreEqual(4, newPage.Data[25]);
+                Assert.AreEqual(5, newPage.Data[26]);
+                Assert.AreEqual(6, newPage.Data[27]);
 
-            Assert.AreEqual(7, newPage.Data[5]);
-            Assert.AreEqual(8, newPage.Data[6]);
-            Assert.AreEqual(9, newPage.Data[7]);
+                Assert.AreEqual(7, newPage.Data[5]);
+                Assert.AreEqual(8, newPage.Data[6]);
+                Assert.AreEqual(9, newPage.Data[7]);
 
-            Assert.AreEqual(10, newPage.Data[30]);
-            Assert.AreEqual(11, newPage.Data[31]);
-            Assert.AreEqual(12, newPage.Data[32]);
+                Assert.AreEqual(10, newPage.Data[30]);
+                Assert.AreEqual(11, newPage.Data[31]);
+                Assert.AreEqual(12, newPage.Data[32]);
+            }
 
             // There should be no incomplete transactions now
 
@@ -441,11 +455,13 @@ namespace RestDB.UnitTests.FileLayer
 
             // Before the transaction is committed the page should be in its original state
 
-            var originalPage = _pagePool.Get(1);
-            _fileSet.Read(originalPage);
+            using (var originalPage = _pagePool.Get(1))
+            {
+                _fileSet.Read(originalPage);
 
-            for (var i = 0; i < _pageSize; i++)
-                Assert.AreEqual(0, originalPage.Data[i]);
+                for (var i = 0; i < _pageSize; i++)
+                    Assert.AreEqual(0, originalPage.Data[i]);
+            }
 
             // Commit transactions to the log files but do not update the data files
 
@@ -476,11 +492,13 @@ namespace RestDB.UnitTests.FileLayer
 
             // After rolling back the page should be unchanged in the data file
 
-            var newPage = _pagePool.Get(1);
-            _fileSet.Read(newPage);
+            using (var newPage = _pagePool.Get(1))
+            {
+                _fileSet.Read(newPage);
 
-            for (var i = 0; i < _pageSize; i++)
-                Assert.AreEqual(0, newPage.Data[i]);
+                for (var i = 0; i < _pageSize; i++)
+                    Assert.AreEqual(0, newPage.Data[i]);
+            }
 
             // There should be no incomplete transactions now
 

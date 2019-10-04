@@ -61,6 +61,29 @@ namespace RestDB.Interfaces.FileLayer
         bool Write(ITransaction transaction, IEnumerable<PageUpdate> updates);
 
         /// <summary>
+        /// Writes a change to a page into the data file and log file in a way that
+        /// makes the write recoverable if there is a sudden system failure
+        /// </summary>
+        /// <param name="transaction">The database version number of the
+        /// transaction that made these changes. If the system fails part way through
+        /// a write operation either all of the pages with the same version number will be
+        /// written to the data file or none of these pages will be written</param>
+        /// <param name="update">The data to write into the file</param>
+        /// <returns>True if the write operation succeeds. Fails when the
+        /// log file is full or unwritable, or system shutdown is in progress and
+        /// changes are being flushed to disk</returns>
+        bool Write(ITransaction transaction, PageUpdate update);
+
+        /// <summary>
+        /// Writes changes and commits the transaction in one operation. This is
+        /// slightly more efficient than doing them in two separate operations
+        /// </summary>
+        /// <param name="transaction">The transaction context</param>
+        /// <param name="updates">The updates to write to the log file</param>
+        /// <returns>A task that completes when the log file has been fully updated</returns>
+        Task WriteAndCommit(ITransaction transaction, IEnumerable<PageUpdate> updates);
+
+        /// <summary>
         /// Tells the file set that there are no more pages to write for a
         /// specific transaction. When all of the pages with this version number
         /// have been written to the log, these changes can start to be applied

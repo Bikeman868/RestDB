@@ -117,6 +117,7 @@ namespace RestDB.FileLayer.LogFiles
 
                 _fileStream.Seek(offset, SeekOrigin.Begin);
                 _fileStream.Write(header, 0, header.Length);
+                _fileStream.Flush();
 
                 _end = offset + size;
                 return (ulong)offset;

@@ -65,10 +65,12 @@ namespace RestDB.UnitTests.FileLayer
 
             if (_pageCache != null)
                 _pageCache.Dispose();
+
+            Reset();
         }
 
         [Test]
-        public void should_updated_pages()
+        public void should_update_pages()
         {
             var transaction = _database.BeginTransaction();
 
@@ -86,12 +88,79 @@ namespace RestDB.UnitTests.FileLayer
                     }
                 });
 
-            var page = _pageCache.Get(transaction, 1);
-            Assert.AreEqual(1, page.Data[10]);
-            Assert.AreEqual(2, page.Data[11]);
-            Assert.AreEqual(3, page.Data[12]);
+            using (var page = _pageCache.Get(transaction, 1))
+            {
+                Assert.AreEqual(1, page.Data[10]);
+                Assert.AreEqual(2, page.Data[11]);
+                Assert.AreEqual(3, page.Data[12]);
+            }
 
             _pageCache.CommitTransaction(transaction);
+            _pageCache.FinalizeTransaction(transaction);
+        }
+
+        [Test]
+        public void should_isolate_transactions()
+        {
+            var transaction1 = _database.BeginTransaction();
+            var transaction2 = _database.BeginTransaction();
+            var transaction3 = _database.BeginTransaction();
+
+            _pageCache.BeginTransaction(transaction1);
+            _pageCache.BeginTransaction(transaction2);
+
+            _pageCache.Update(
+                transaction2, new[]
+                {
+                    new PageUpdate
+                    {
+                        SequenceNumber = 1,
+                        PageNumber = 1,
+                        Offset = 10,
+                        Data = new byte[]{ 1, 2, 3 }
+                    }
+                });
+
+            _pageCache.BeginTransaction(transaction3);
+
+            using (var page = _pageCache.Get(transaction1, 1))
+            {
+                Assert.AreEqual(0, page.Data[10]);
+                Assert.AreEqual(0, page.Data[11]);
+                Assert.AreEqual(0, page.Data[12]);
+            }
+
+            using (var page = _pageCache.Get(transaction2, 1))
+            {
+                Assert.AreEqual(1, page.Data[10]);
+                Assert.AreEqual(2, page.Data[11]);
+                Assert.AreEqual(3, page.Data[12]);
+            }
+
+            using (var page = _pageCache.Get(transaction3, 1))
+            { 
+                Assert.AreEqual(0, page.Data[10]);
+                Assert.AreEqual(0, page.Data[11]);
+                Assert.AreEqual(0, page.Data[12]);
+            }
+
+            _pageCache.RollbackTransaction(transaction1);
+            _pageCache.RollbackTransaction(transaction3);
+
+            _database.CommitTransaction(transaction2);
+            _pageCache.CommitTransaction(transaction2);
+            _pageCache.FinalizeTransaction(transaction2);
+
+            var transaction4 = _database.BeginTransaction();
+
+            using (var page = _pageCache.Get(transaction4, 1))
+            {
+                Assert.AreEqual(1, page.Data[10]);
+                Assert.AreEqual(2, page.Data[11]);
+                Assert.AreEqual(3, page.Data[12]);
+            }
+
+            _pageCache.RollbackTransaction(transaction4);
         }
     }
 }
