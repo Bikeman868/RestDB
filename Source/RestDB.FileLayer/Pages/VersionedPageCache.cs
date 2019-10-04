@@ -178,13 +178,17 @@ namespace RestDB.FileLayer.Pages
                 }
             }
 
-            if (head != null && head.ModifiedPages != null)
+            if (head != null)
             {
-                foreach (var page in head.ModifiedPages.Values)
-                    page.Dispose();
+                if (head.ModifiedPages != null)
+                {
+                    foreach (var page in head.ModifiedPages.Values)
+                        page.Dispose();
+                }
+                return head.Updates;
             }
 
-            return head.Updates;
+            return null;
         }
 
         IPage IVersionedPageCache.Get(ITransaction transaction, ulong pageNumber)

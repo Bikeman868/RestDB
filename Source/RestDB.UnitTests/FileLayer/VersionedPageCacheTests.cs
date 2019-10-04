@@ -95,6 +95,7 @@ namespace RestDB.UnitTests.FileLayer
                 Assert.AreEqual(3, page.Data[12]);
             }
 
+            _database.CommitTransaction(transaction);
             _pageCache.CommitTransaction(transaction);
             _pageCache.FinalizeTransaction(transaction);
         }
