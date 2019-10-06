@@ -9,6 +9,6 @@ namespace RestDB.Interfaces
     /// </summary>
     public interface IErrorLog
     {
-        IErrorLog Write(string message);
+        IErrorLog Write(string message, Exception exception = null);
     }
 }

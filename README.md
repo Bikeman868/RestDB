@@ -16,6 +16,10 @@ A more intuitive database with a non-proprietary http/restful interface
 - Supports stored procedures, functions and custom data types.
 - Query plan optimization. Cache and reuse query plans.Statistical analysis of data for query plan optimization.
 - Multiple language support (T-SQL, MySQL and Native).
+- Granular permissions, identity groups and roles.
+- Backup, restore, trasaction logs and replication.
+- Use one file set or many sets and split each file set into as many files as you like to balance simplicity against performance.
+- Map database objects (databases, tables, indexes, stored procedures etc) to any file set for greater flexibility.
 
 ## Project Status
 Initial development phase. MVP not achieved yet.

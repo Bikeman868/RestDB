@@ -19,6 +19,7 @@ namespace RestDB.UnitTests.FileLayer
         IPagePoolFactory _pagePoolFactory;
         IPagePool _pagePool;
         IStartUpLog _startUpLog;
+        IErrorLog _errorLog;
         IDatabase _database;
 
         FileInfo _logFileInfo1;
@@ -34,6 +35,7 @@ namespace RestDB.UnitTests.FileLayer
         public void Setup()
         {
             _startUpLog = SetupMock<IStartUpLog>();
+            _errorLog = SetupMock<IErrorLog>();
             _pagePoolFactory = SetupMock<IPagePoolFactory>();
             _pagePool = _pagePoolFactory.Create(_pageSize);
 
@@ -49,7 +51,7 @@ namespace RestDB.UnitTests.FileLayer
                 _pagePoolFactory,
                 _startUpLog);
 
-            _pageCache = new VersionedPageCache(_fileSet, _pagePoolFactory, _startUpLog);
+            _pageCache = new VersionedPageCache(_fileSet, _pagePoolFactory, _startUpLog, _errorLog);
 
             var pageStoreFactory = SetupMock<IPageStoreFactory>();
             var fileSetFactory = SetupMock<IFileSetFactory>();
@@ -162,6 +164,97 @@ namespace RestDB.UnitTests.FileLayer
             }
 
             _pageCache.RollbackTransaction(transaction4);
+        }
+
+        [Test]
+        public void should_snapshot_at_start_of_transaction()
+        {
+            const ulong pageNumber = 5;
+
+            // Modify a page within a transaction
+
+            var transaction1 = _database.BeginTransaction();
+            _pageCache.BeginTransaction(transaction1);
+            _pageCache.Update(
+                transaction1, new[]
+                {
+                    new PageUpdate
+                    {
+                        SequenceNumber = 1,
+                        PageNumber = pageNumber,
+                        Offset = 3,
+                        Data = new byte[]{ 98, 99, 100 }
+                    }
+                });
+            _database.CommitTransaction(transaction1);
+            _pageCache.CommitTransaction(transaction1);
+            _pageCache.FinalizeTransaction(transaction1);
+
+            // Start a transaction to read this modified page
+
+            var transaction2 = _database.BeginTransaction();
+            _pageCache.BeginTransaction(transaction2);
+            using (var page = _pageCache.Get(transaction2, pageNumber))
+            {
+                Assert.AreEqual(98, page.Data[3]);
+                Assert.AreEqual(99, page.Data[4]);
+                Assert.AreEqual(100, page.Data[5]);
+            }
+
+            // Make some more changes to this page
+
+            for (var i = 0; i < 5; i++)
+            {
+                var transaction = _database.BeginTransaction();
+                _pageCache.BeginTransaction(transaction);
+                _pageCache.Update(
+                    transaction, new[]
+                    {
+                    new PageUpdate
+                    {
+                        SequenceNumber = 1,
+                        PageNumber = pageNumber,
+                        Offset = 3,
+                        Data = new byte[]{ (byte)i, (byte)(i+1), (byte)(i+2) }
+                    }
+                    });
+                _database.CommitTransaction(transaction);
+                _pageCache.CommitTransaction(transaction);
+                _pageCache.FinalizeTransaction(transaction);
+            }
+
+            // Verify that the open transaction has read consistency
+
+            using (var page = _pageCache.Get(transaction2, pageNumber))
+            {
+                Assert.AreEqual(98, page.Data[3]);
+                Assert.AreEqual(99, page.Data[4]);
+                Assert.AreEqual(100, page.Data[5]);
+            }
+            _pageCache.RollbackTransaction(transaction2);
+
+            // Verify that a new transaction sees the updated values
+
+            var transaction3 = _database.BeginTransaction();
+            _pageCache.BeginTransaction(transaction3);
+            using (var page = _pageCache.Get(transaction3, pageNumber))
+            {
+                Assert.AreEqual(4, page.Data[3]);
+                Assert.AreEqual(5, page.Data[4]);
+                Assert.AreEqual(6, page.Data[5]);
+            }
+        }
+
+        [Test]
+        public void should_not_cleanup_referenced_versions()
+        {
+
+        }
+
+        [Test]
+        public void should_cleanup_old_versions()
+        {
+
         }
     }
 }
