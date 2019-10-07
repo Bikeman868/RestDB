@@ -171,7 +171,7 @@ namespace RestDB.UnitTests.FileLayer
         {
             const ulong pageNumber = 5;
 
-            // Modify a page within a transaction
+            // Modify some pages within a transaction
 
             var transaction1 = _database.BeginTransaction();
             _pageCache.BeginTransaction(transaction1);
@@ -184,13 +184,21 @@ namespace RestDB.UnitTests.FileLayer
                         PageNumber = pageNumber,
                         Offset = 3,
                         Data = new byte[]{ 98, 99, 100 }
-                    }
+                    },
+                    new PageUpdate
+                    {
+                        SequenceNumber = 2,
+                        PageNumber = pageNumber + 1,
+                        Offset = 10,
+                        Data = new byte[]{ 98, 99, 100 }
+                    },
+
                 });
             _database.CommitTransaction(transaction1);
             _pageCache.CommitTransaction(transaction1);
             _pageCache.FinalizeTransaction(transaction1);
 
-            // Start a transaction to read this modified page
+            // Start a transaction and read one of the modified pages
 
             var transaction2 = _database.BeginTransaction();
             _pageCache.BeginTransaction(transaction2);
@@ -201,7 +209,7 @@ namespace RestDB.UnitTests.FileLayer
                 Assert.AreEqual(100, page.Data[5]);
             }
 
-            // Make some more changes to this page
+            // Make some more changes to these pages
 
             for (var i = 0; i < 5; i++)
             {
@@ -210,13 +218,20 @@ namespace RestDB.UnitTests.FileLayer
                 _pageCache.Update(
                     transaction, new[]
                     {
-                    new PageUpdate
-                    {
-                        SequenceNumber = 1,
-                        PageNumber = pageNumber,
-                        Offset = 3,
-                        Data = new byte[]{ (byte)i, (byte)(i+1), (byte)(i+2) }
-                    }
+                        new PageUpdate
+                        {
+                            SequenceNumber = 1,
+                            PageNumber = pageNumber,
+                            Offset = 3,
+                            Data = new byte[]{ (byte)i, (byte)(i+1), (byte)(i+2) }
+                        },
+                        new PageUpdate
+                        {
+                            SequenceNumber = 2,
+                            PageNumber = pageNumber + 1,
+                            Offset = 10,
+                            Data = new byte[]{ (byte)i, (byte)(i+1), (byte)(i+2) }
+                        }
                     });
                 _database.CommitTransaction(transaction);
                 _pageCache.CommitTransaction(transaction);
@@ -231,17 +246,33 @@ namespace RestDB.UnitTests.FileLayer
                 Assert.AreEqual(99, page.Data[4]);
                 Assert.AreEqual(100, page.Data[5]);
             }
+
+            // Verrify that the open transaction can not see the updates
+
+            using (var page = _pageCache.Get(transaction2, pageNumber + 1))
+            {
+                Assert.AreEqual(98, page.Data[10]);
+                Assert.AreEqual(99, page.Data[11]);
+                Assert.AreEqual(100, page.Data[12]);
+            }
             _pageCache.RollbackTransaction(transaction2);
 
-            // Verify that a new transaction sees the updated values
+            // Verify that a new transaction does see the updated values
 
             var transaction3 = _database.BeginTransaction();
             _pageCache.BeginTransaction(transaction3);
+
             using (var page = _pageCache.Get(transaction3, pageNumber))
             {
                 Assert.AreEqual(4, page.Data[3]);
                 Assert.AreEqual(5, page.Data[4]);
                 Assert.AreEqual(6, page.Data[5]);
+            }
+            using (var page = _pageCache.Get(transaction3, pageNumber + 1))
+            {
+                Assert.AreEqual(4, page.Data[10]);
+                Assert.AreEqual(5, page.Data[11]);
+                Assert.AreEqual(6, page.Data[12]);
             }
         }
 

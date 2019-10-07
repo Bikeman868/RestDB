@@ -40,8 +40,8 @@ namespace RestDB.FileLayer.Pages
         private readonly IDictionary<ulong, TransactionHead> _transactions;
         private readonly IDictionary<ulong, PageHead> _pages;
 
-        private readonly OwinContainers.LinkedList<VersionHead> _oldVersions;
         private readonly Thread _versionCleanupThread;
+        private readonly Thread _pageCleanupThread;
 
         private bool _disposing;
 
@@ -60,7 +60,6 @@ namespace RestDB.FileLayer.Pages
             _versions = new Dictionary<ulong, VersionHead>();
             _transactions = new Dictionary<ulong, TransactionHead>();
             _pages = new Dictionary<ulong, PageHead>();
-            _oldVersions = new OwinContainers.LinkedList<VersionHead>();
 
             startUpLog.Write("Creating a new page cache for " + _fileSet);
 
@@ -74,14 +73,17 @@ namespace RestDB.FileLayer.Pages
                 {
                     try
                     {
-                        Thread.Sleep(10);
-                        var version = _oldVersions.PopFirst();
-                        while (version != null)
+                        Thread.Sleep(20);
+
+                        List<VersionHead> versions;
+                        lock (_versions) versions = _versions.Values.OrderBy(v => v.VersionNumber).ToList();
+
+                        foreach(var version in versions)
                         {
+                            if (version.IsReferenced || version.VersionNumber == _database.CurrentVersion) break;
+
                             lock (_versions) _versions.Remove(version.VersionNumber);
                             version.Dispose();
-
-                            version = _oldVersions.PopFirst();
                         }
                     }
                     catch (ThreadAbortException)
@@ -102,7 +104,39 @@ namespace RestDB.FileLayer.Pages
                 Priority = ThreadPriority.AboveNormal
             };
 
+            _pageCleanupThread = new Thread(() =>
+            {
+                _startUpLog.Write("Page cache stale page clean up thread starting");
+
+                while (!_disposing)
+                {
+                    try
+                    {
+                        Thread.Sleep(50);
+
+                        // TODO: Delete pages that have not been touched for a while and
+                        //       have no cached versions
+                    }
+                    catch (ThreadAbortException)
+                    {
+                        return;
+                    }
+                    catch (Exception ex)
+                    {
+                        _errorLog.Write("Exception in page cache stale page cleanup thread. " + ex.Message, ex);
+                    }
+                }
+
+                _startUpLog.Write("Page cache stale page clean up thread exiting");
+            })
+            {
+                IsBackground = true,
+                Name = "Page cache version cleanup",
+                Priority = ThreadPriority.AboveNormal
+            };
+
             _versionCleanupThread.Start();
+            _pageCleanupThread.Start();
         }
 
         public void Dispose()
@@ -112,7 +146,8 @@ namespace RestDB.FileLayer.Pages
 
             _fileSet.Dispose();
 
-            _versionCleanupThread.Join(50);
+            _versionCleanupThread.Join(200);
+            _pageCleanupThread.Join(200);
 
             lock (_transactions)
             {
@@ -128,15 +163,6 @@ namespace RestDB.FileLayer.Pages
                     version.Dispose();
 
                 _versions.Clear();
-            }
-
-            lock (_oldVersions)
-            {
-                foreach (var versionElement in _oldVersions)
-                {
-                    versionElement.Data.Dispose();
-                }
-                _oldVersions.Clear();
             }
 
             lock (_pages)
@@ -189,10 +215,7 @@ namespace RestDB.FileLayer.Pages
             lock (_versions)
             {
                 if (_versions.TryGetValue(transaction.BeginVersionNumber, out VersionHead version))
-                {
-                    if (version.TransactionEnded(transaction) && transaction.BeginVersionNumber != _database.CurrentVersion)
-                        _oldVersions.Append(version);
-                }
+                    version.TransactionEnded(transaction);
             }
 
             if (transactionHead != null)
