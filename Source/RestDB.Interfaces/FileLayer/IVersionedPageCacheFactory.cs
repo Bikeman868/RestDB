@@ -1,4 +1,6 @@
-﻿namespace RestDB.Interfaces.FileLayer
+﻿using RestDB.Interfaces.DatabaseLayer;
+
+namespace RestDB.Interfaces.FileLayer
 {
     /// <summary>
     /// Wraps a file set, adding caching and merging of pending writes
@@ -9,6 +11,6 @@
         /// <summary>
         /// Creates a cache on top of a file set
         /// </summary>
-        IVersionedPageCache Create(IFileSet fileSet);
+        IVersionedPageCache Create(IDatabase database, IFileSet fileSet);
     }
 }

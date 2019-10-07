@@ -23,6 +23,8 @@ namespace RestDB.FileLayer.Pages
      * - Never modify pages directly because higher up layers may have references to them,
      *   instead copy the page, apply changes, save the original page as a specific version
      *   and save the copy as the current page.
+     * - The database calls the page cache for every transaction start and end so that it is
+     *   aware of every executing transaction
      */
 
     internal class VersionedPageCache : IVersionedPageCache
@@ -32,6 +34,7 @@ namespace RestDB.FileLayer.Pages
 
         private readonly IFileSet _fileSet;
         private readonly IPagePool _pagePool;
+        private readonly IDatabase _database;
 
         private readonly IDictionary<ulong, VersionHead> _versions;
         private readonly IDictionary<ulong, TransactionHead> _transactions;
@@ -43,7 +46,8 @@ namespace RestDB.FileLayer.Pages
         private bool _disposing;
 
         public VersionedPageCache(
-            IFileSet fileSet, 
+            IFileSet fileSet,
+            IDatabase database,
             IPagePoolFactory pagePoolFactory, 
             IStartUpLog startUpLog,
             IErrorLog errorLog)
@@ -51,6 +55,8 @@ namespace RestDB.FileLayer.Pages
             _startUpLog = startUpLog;
             _errorLog = errorLog;
             _fileSet = fileSet;
+            _database = database;
+
             _versions = new Dictionary<ulong, VersionHead>();
             _transactions = new Dictionary<ulong, TransactionHead>();
             _pages = new Dictionary<ulong, PageHead>();
@@ -72,7 +78,9 @@ namespace RestDB.FileLayer.Pages
                         var version = _oldVersions.PopFirst();
                         while (version != null)
                         {
+                            lock (_versions) _versions.Remove(version.VersionNumber);
                             version.Dispose();
+
                             version = _oldVersions.PopFirst();
                         }
                     }
@@ -134,7 +142,7 @@ namespace RestDB.FileLayer.Pages
             lock (_pages)
             {
                 foreach (var pageHead in _pages.Values)
-                    pageHead.Page.Dispose();
+                    pageHead.Dispose();
 
                 _pages.Clear();
             }
@@ -151,74 +159,20 @@ namespace RestDB.FileLayer.Pages
 
             lock (_transactions) _transactions.Add(transaction.TransactionId, head);
 
+            VersionHead version;
+
             lock (_versions)
             {
-                if (!_versions.TryGetValue(transaction.BeginVersionNumber, out VersionHead version))
+                if (!_versions.TryGetValue(transaction.BeginVersionNumber, out version))
                 {
                     version = new VersionHead(transaction.BeginVersionNumber);
                     _versions.Add(transaction.BeginVersionNumber, version);
                 }
-                version.TransactionStarted(transaction);
             }
+
+            version.TransactionStarted(transaction);
 
             return this;
-        }
-
-        Task IVersionedPageCache.CommitTransaction(ITransaction transaction)
-        {
-            var updates = CleanupTransaction(transaction);
-
-            if (updates == null || updates.Count == 0)
-                return null;
-
-            var versionHead = new VersionHead(transaction.CommitVersionNumber);
-
-            lock (_versions)
-                _versions.Add(transaction.CommitVersionNumber, versionHead);
-
-            IPage page = null;
-            foreach(var update in updates.OrderBy(u => u.PageNumber).ThenBy(u => u.SequenceNumber))
-            {
-                if (page == null || update.PageNumber != page.PageNumber)
-                {
-                    PageHead pageHead;
-                    lock (_pages)
-                    {
-                        if (!_pages.TryGetValue(update.PageNumber, out pageHead))
-                        {
-                            using (var newPage = _pagePool.Get(update.PageNumber))
-                            {
-                                if (!_fileSet.Read(newPage))
-                                    newPage.Data.Initialize();
-
-                                pageHead = new PageHead(newPage);
-                                _pages.Add(update.PageNumber, pageHead);
-                            }
-                        }
-                    }
-
-                    using (var oldPage = pageHead.Page.Reference())
-                    {
-                        page = _pagePool.Get(update.PageNumber);
-                        oldPage.Data.CopyTo(page.Data, 0);
-                        pageHead.AddVersion(versionHead.VersionNumber, oldPage);
-                    }
-                }
-
-                update.Data.CopyTo(page.Data, update.Offset);
-            }
-
-            return _fileSet.WriteAndCommit(transaction, updates);
-        }
-
-        void IVersionedPageCache.RollbackTransaction(ITransaction transaction)
-        {
-            CleanupTransaction(transaction);
-        }
-
-        Task IVersionedPageCache.FinalizeTransaction(ITransaction transaction)
-        {
-            return _fileSet.FinalizeTransaction(transaction);
         }
 
         private List<PageUpdate> CleanupTransaction(ITransaction transaction)
@@ -236,13 +190,8 @@ namespace RestDB.FileLayer.Pages
             {
                 if (_versions.TryGetValue(transaction.BeginVersionNumber, out VersionHead version))
                 {
-                    if (version.TransactionEnded(transaction))
-                    {
-                        // TODO: we should not remove the latest version because new transactions
-                        //       can start up with this version number
-                        _versions.Remove(transaction.BeginVersionNumber);
+                    if (version.TransactionEnded(transaction) && transaction.BeginVersionNumber != _database.CurrentVersion)
                         _oldVersions.Append(version);
-                    }
                 }
             }
 
@@ -253,6 +202,62 @@ namespace RestDB.FileLayer.Pages
             }
 
             return null;
+        }
+
+        Task IVersionedPageCache.CommitTransaction(ITransaction transaction)
+        {
+            var updates = CleanupTransaction(transaction);
+
+            if (updates == null || updates.Count == 0)
+                return null;
+
+            var versionHead = new VersionHead(transaction.CommitVersionNumber);
+
+            lock (_versions)
+                _versions.Add(transaction.CommitVersionNumber, versionHead);
+
+            IPage newPage = null;
+            foreach(var update in updates.OrderBy(u => u.PageNumber).ThenBy(u => u.SequenceNumber))
+            {
+                if (newPage == null || update.PageNumber != newPage.PageNumber)
+                {
+                    newPage = _pagePool.Get(update.PageNumber);
+
+                    PageVersion currentPageVersion = null;
+                    lock (_pages)
+                    {
+                        if (_pages.TryGetValue(update.PageNumber, out PageHead pageHead))
+                            currentPageVersion = pageHead.Versions.FirstOrDefault();
+                    }
+
+                    if (currentPageVersion == null)
+                    {
+                        if (!_fileSet.Read(newPage)) newPage.Data.Initialize();
+                    }
+                    else
+                    {
+                        currentPageVersion.Page.Data.CopyTo(newPage.Data, 0);
+                    }
+
+                    versionHead.AddPage(new PageVersion(versionHead.VersionNumber, newPage));
+                }
+
+                update.Data.CopyTo(newPage.Data, update.Offset);
+            }
+
+            versionHead.AddToPages(_pages, GetFromFileSet);
+
+            return _fileSet.WriteAndCommit(transaction, updates);
+        }
+
+        void IVersionedPageCache.RollbackTransaction(ITransaction transaction)
+        {
+            CleanupTransaction(transaction);
+        }
+
+        Task IVersionedPageCache.FinalizeTransaction(ITransaction transaction)
+        {
+            return _fileSet.FinalizeTransaction(transaction);
         }
 
         IPage IVersionedPageCache.Get(ITransaction transaction, ulong pageNumber)
@@ -275,35 +280,19 @@ namespace RestDB.FileLayer.Pages
             {
                 if (!_pages.TryGetValue(pageNumber, out pageHead))
                 {
-                    using (var newPage = _pagePool.Get(pageNumber))
-                    {
-                        // TODO: Not great to have _pages locked while reading from _fileSet
-                        if (!_fileSet.Read(newPage))
-                            newPage.Data.Initialize();
-
-                        _pages.Add(pageNumber, new PageHead(newPage));
-
-                        return newPage.Reference();
-                    }
+                    pageHead = new PageHead(pageNumber, GetFromFileSet);
+                    _pages.Add(pageNumber, pageHead);
                 }
             }
 
-            var page = pageHead.Page;
+            return pageHead.GetVersion(transaction.BeginVersionNumber);
+        }
 
-            if (transaction != null && pageHead.Versions != null)
-            {
-                var pageVersion = pageHead.Versions.FirstElementOrDefault(pv => pv.VersionNumber <= transaction.BeginVersionNumber);
-
-                if (pageVersion == null)
-                    pageVersion = pageHead.Versions.LastElementOrDefault();
-                else
-                    pageVersion = pageVersion.Prior;
-
-                if (pageVersion != null)
-                    page = pageVersion.Data.Page;
-            }
-
-            return page.Reference();
+        private IPage GetFromFileSet(ulong pageNumber)
+        {
+            var page = _pagePool.Get(pageNumber);
+            if (!_fileSet.Read(page)) page.Data.Initialize();
+            return page;
         }
 
         IVersionedPageCache IVersionedPageCache.Update(ITransaction transaction, IEnumerable<PageUpdate> updates)
@@ -350,7 +339,7 @@ namespace RestDB.FileLayer.Pages
         {
             using (var page = _pagePool.Get(pageNumber, true))
             {
-                lock (_pages) _pages.Add(pageNumber, new PageHead(page));
+                lock (_pages) _pages.Add(pageNumber, new PageHead(pageNumber, GetFromFileSet));
                 return page.Reference();
             }
         }
@@ -389,46 +378,95 @@ namespace RestDB.FileLayer.Pages
                 return Interlocked.Decrement(ref _transactionCount) == 0;
             }
 
-            void AddPage(PageVersion pageVersion)
+            public void AddPage(PageVersion pageVersion)
             {
                 _pageVersions.Append(pageVersion);
             }
+
+            public void AddToPages(IDictionary<ulong, PageHead> pages, Func<ulong, IPage> pageGetter)
+            {
+                foreach(var pageVersionElement in _pageVersions)
+                {
+                    var pageVersion = pageVersionElement.Data;
+                    var pageNumber = pageVersion.Page.PageNumber;
+
+                    lock(pages)
+                    {
+                        if (!pages.TryGetValue(pageNumber, out PageHead pageHead))
+                        {
+                            pageHead = new PageHead(pageNumber, pageGetter);
+                            pages.Add(pageNumber, pageHead);
+                        }
+                        pageHead.AddVersion(pageVersion);
+                    }
+                }
+            }
+
+            public bool IsReferenced { get { return _transactionCount != 0; } }
         }
 
         /// <summary>
-        /// Contains the current version of the page and a list of prior versions
-        /// that are still accessible to transactions
+        /// Contains a list of prior versions of a page that are still accessible by transactions
         /// </summary>
         private class PageHead: IDisposable
         {
             public ulong PageNumber { get; private set; }
-            public IPage Page { get; private set; }
             public OwinContainers.LinkedList<PageVersion> Versions { get; private set; }
-            public int VersionCount;
 
-            public PageHead(IPage page)
+            private Func<ulong, IPage> _pageGetter;
+
+            public PageHead(ulong pageNumber, Func<ulong, IPage> pageGetter)
             {
-                PageNumber = page.PageNumber;
-                Page = page.Reference();
+                PageNumber = pageNumber;
                 Versions = new OwinContainers.LinkedList<PageVersion>();
+                _pageGetter = pageGetter;
             }
 
             public void Dispose()
             {
-                Page.Dispose();
+            }
+
+            private void EnsureOriginalVersion()
+            {
+                if (Versions.IsEmpty)
+                {
+                    var page = _pageGetter(PageNumber);
+                    var pageVersion = new PageVersion(0, page);
+
+                    lock (Versions)
+                    {
+                        if (Versions.IsEmpty)
+                        {
+                            pageVersion.Added(this, Versions.Append(pageVersion));
+                        }
+                    }
+                }
+            }
+
+            public IPage GetVersion(ulong versionNumber)
+            {
+                EnsureOriginalVersion();
+
+                var pageVersionElement = Versions.FirstElementOrDefault(pv => pv.VersionNumber <= versionNumber);
+
+                if (pageVersionElement == null)
+                    throw new FileLayerException(
+                        "No suitable version in the VersionPageCache. Theoretically this can never "+
+                        "happen so there is a bug in the code. Page number " + PageNumber + " version " + versionNumber);
+
+                return pageVersionElement.Data.Page.Reference();
             }
 
             /// <summary>
             /// Adds a new version of this page
             /// </summary>
-            public PageVersion AddVersion(ulong versionNumber, IPage page)
+            public PageVersion AddVersion(PageVersion pageVersion)
             {
-                Interlocked.Increment(ref VersionCount);
-                var pageVersion = new PageVersion(versionNumber, page);
+                EnsureOriginalVersion();
 
                 lock (Versions)
                 {
-                    var nextVersion = Versions.FirstElementOrDefault(v => v.VersionNumber >= versionNumber);
+                    var nextVersion = Versions.FirstElementOrDefault(v => v.VersionNumber >= pageVersion.VersionNumber);
                     pageVersion.Added(this, Versions.InsertBefore(nextVersion, pageVersion));
                 }
 
@@ -441,12 +479,13 @@ namespace RestDB.FileLayer.Pages
             public void DeleteVersion(OwinContainers.LinkedList<PageVersion>.ListElement versionElement)
             {
                 Versions.Delete(versionElement);
-                Interlocked.Decrement(ref VersionCount);
             }
         }
 
         /// <summary>
-        /// Represents a specific version of a spacific page
+        /// Represents a specific version of a specific page. The matrix of page numbers and database
+        /// versions is sparse and dynamically populated. Once there are no more transactions on a 
+        /// particular version, all the pages for that version are recycled
         /// </summary>
         private class PageVersion: IDisposable
         {
@@ -473,7 +512,9 @@ namespace RestDB.FileLayer.Pages
 
             public void Dispose()
             {
-                _pageHead.DeleteVersion(_pageVersionsElement);
+                if (_pageHead != null)
+                    _pageHead.DeleteVersion(_pageVersionsElement);
+
                 Page.Dispose();
             }
         }

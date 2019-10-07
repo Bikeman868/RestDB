@@ -1,4 +1,5 @@
 ﻿using RestDB.Interfaces;
+using RestDB.Interfaces.DatabaseLayer;
 using RestDB.Interfaces.FileLayer;
 
 namespace RestDB.FileLayer.Pages
@@ -19,9 +20,9 @@ namespace RestDB.FileLayer.Pages
             _errorLog = errorLog;
         }
 
-        IVersionedPageCache IVersionedPageCacheFactory.Create(IFileSet fileSet)
+        IVersionedPageCache IVersionedPageCacheFactory.Create(IDatabase database, IFileSet fileSet)
         {
-            return new VersionedPageCache(fileSet, _pagePoolFactory, _startUpLog, _errorLog);
+            return new VersionedPageCache(fileSet, database, _pagePoolFactory, _startUpLog, _errorLog);
         }
     }
 }

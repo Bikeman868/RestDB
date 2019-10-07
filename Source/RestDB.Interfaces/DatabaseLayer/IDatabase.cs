@@ -116,13 +116,6 @@ namespace RestDB.Interfaces.DatabaseLayer
         void DeleteJob(IJob job);
 
         /// <summary>
-        /// Increments the version number of the database and returns
-        /// hte incremented value. If called simultaneously by multiple
-        /// threads returns a different value to each thread.
-        /// </summary>
-        ulong IncrementVersion();
-
-        /// <summary>
         /// The current version number of the database. This number is
         /// recorded in transactions that want a consistent view of the
         /// database at a specific revision level.
@@ -143,13 +136,18 @@ namespace RestDB.Interfaces.DatabaseLayer
         /// Transactions that are not committed are rolled back automatically
         /// if the process that owns the transaction fails, or the system crashes
         /// unexpectedly.
+        /// Increments the CurrentVersion only after the transaction has updated 
+        /// all the page caches.
+        /// Only one transaction at a time can commit, other threads will block
+        /// until the commit completes and the version number is updated. The
+        /// writing to the log file is async, so this part does not block.
         /// </summary>
         void CommitTransaction(ITransaction transaction);
 
         /// <summary>
         /// Discards all the changes made in the context of a transaction.
         /// These changes are guaranteed not to be applied to the database 
-        /// files
+        /// files.
         /// </summary>
         void RollbackTransaction(ITransaction transaction);
     }

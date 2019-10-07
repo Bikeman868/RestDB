@@ -107,11 +107,6 @@ namespace RestDB.UnitTests.Mocks.DatabaseLayer
             {
             }
 
-            public ulong IncrementVersion()
-            {
-                return ++_version;
-            }
-
             public void RollbackTransaction(ITransaction transaction)
             {
                 throw new NotImplementedException();

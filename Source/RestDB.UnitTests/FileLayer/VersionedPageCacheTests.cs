@@ -45,19 +45,19 @@ namespace RestDB.UnitTests.FileLayer
             _dataFileInfo1 = new FileInfo("C:\\temp\\test1.mdf");
             _dataFileInfo2 = new FileInfo("C:\\temp\\test2.mdf");
 
+            var pageStoreFactory = SetupMock<IPageStoreFactory>();
+            var fileSetFactory = SetupMock<IFileSetFactory>();
+            var pageStore = pageStoreFactory.Open(fileSetFactory.Open(null, null));
+            var databaseFactory = SetupMock<IDatabaseFactory>();
+            _database = databaseFactory.Open(pageStore);
+
             _fileSet = new FileSet(
                 new IDataFile[] { new DataFile(_dataFileInfo1, _pageSize, _startUpLog), new DataFile(_dataFileInfo2, _pageSize, _startUpLog) },
                 new ILogFile[] { new LogFile(_logFileInfo1, true, _startUpLog), new LogFile(_logFileInfo2, true, _startUpLog) },
                 _pagePoolFactory,
                 _startUpLog);
 
-            _pageCache = new VersionedPageCache(_fileSet, _pagePoolFactory, _startUpLog, _errorLog);
-
-            var pageStoreFactory = SetupMock<IPageStoreFactory>();
-            var fileSetFactory = SetupMock<IFileSetFactory>();
-            var pageStore = pageStoreFactory.Open(fileSetFactory.Open(null, null));
-            var databaseFactory = SetupMock<IDatabaseFactory>();
-            _database = databaseFactory.Open(pageStore);
+            _pageCache = new VersionedPageCache(_fileSet, _database, _pagePoolFactory, _startUpLog, _errorLog);
         }
 
         [TearDown]
