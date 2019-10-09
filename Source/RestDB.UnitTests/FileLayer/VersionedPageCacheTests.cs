@@ -90,7 +90,7 @@ namespace RestDB.UnitTests.FileLayer
                     }
                 });
 
-            using (var page = _pageCache.Get(transaction, 1))
+            using (var page = _pageCache.Get(transaction, 1, CacheHints.None))
             {
                 Assert.AreEqual(1, page.Data[10]);
                 Assert.AreEqual(2, page.Data[11]);
@@ -126,21 +126,21 @@ namespace RestDB.UnitTests.FileLayer
 
             _pageCache.BeginTransaction(transaction3);
 
-            using (var page = _pageCache.Get(transaction1, 1))
+            using (var page = _pageCache.Get(transaction1, 1, CacheHints.None))
             {
                 Assert.AreEqual(0, page.Data[10]);
                 Assert.AreEqual(0, page.Data[11]);
                 Assert.AreEqual(0, page.Data[12]);
             }
 
-            using (var page = _pageCache.Get(transaction2, 1))
+            using (var page = _pageCache.Get(transaction2, 1, CacheHints.None))
             {
                 Assert.AreEqual(1, page.Data[10]);
                 Assert.AreEqual(2, page.Data[11]);
                 Assert.AreEqual(3, page.Data[12]);
             }
 
-            using (var page = _pageCache.Get(transaction3, 1))
+            using (var page = _pageCache.Get(transaction3, 1, CacheHints.None))
             { 
                 Assert.AreEqual(0, page.Data[10]);
                 Assert.AreEqual(0, page.Data[11]);
@@ -156,7 +156,7 @@ namespace RestDB.UnitTests.FileLayer
 
             var transaction4 = _database.BeginTransaction();
 
-            using (var page = _pageCache.Get(transaction4, 1))
+            using (var page = _pageCache.Get(transaction4, 1, CacheHints.None))
             {
                 Assert.AreEqual(1, page.Data[10]);
                 Assert.AreEqual(2, page.Data[11]);
@@ -202,7 +202,7 @@ namespace RestDB.UnitTests.FileLayer
 
             var transaction2 = _database.BeginTransaction();
             _pageCache.BeginTransaction(transaction2);
-            using (var page = _pageCache.Get(transaction2, pageNumber))
+            using (var page = _pageCache.Get(transaction2, pageNumber, CacheHints.None))
             {
                 Assert.AreEqual(98, page.Data[3]);
                 Assert.AreEqual(99, page.Data[4]);
@@ -240,7 +240,7 @@ namespace RestDB.UnitTests.FileLayer
 
             // Verify that the open transaction has read consistency
 
-            using (var page = _pageCache.Get(transaction2, pageNumber))
+            using (var page = _pageCache.Get(transaction2, pageNumber, CacheHints.None))
             {
                 Assert.AreEqual(98, page.Data[3]);
                 Assert.AreEqual(99, page.Data[4]);
@@ -249,7 +249,7 @@ namespace RestDB.UnitTests.FileLayer
 
             // Verrify that the open transaction can not see the updates
 
-            using (var page = _pageCache.Get(transaction2, pageNumber + 1))
+            using (var page = _pageCache.Get(transaction2, pageNumber + 1, CacheHints.None))
             {
                 Assert.AreEqual(98, page.Data[10]);
                 Assert.AreEqual(99, page.Data[11]);
@@ -262,13 +262,13 @@ namespace RestDB.UnitTests.FileLayer
             var transaction3 = _database.BeginTransaction();
             _pageCache.BeginTransaction(transaction3);
 
-            using (var page = _pageCache.Get(transaction3, pageNumber))
+            using (var page = _pageCache.Get(transaction3, pageNumber, CacheHints.None))
             {
                 Assert.AreEqual(4, page.Data[3]);
                 Assert.AreEqual(5, page.Data[4]);
                 Assert.AreEqual(6, page.Data[5]);
             }
-            using (var page = _pageCache.Get(transaction3, pageNumber + 1))
+            using (var page = _pageCache.Get(transaction3, pageNumber + 1, CacheHints.None))
             {
                 Assert.AreEqual(4, page.Data[10]);
                 Assert.AreEqual(5, page.Data[11]);

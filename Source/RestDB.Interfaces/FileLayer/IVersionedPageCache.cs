@@ -14,6 +14,11 @@ namespace RestDB.Interfaces.FileLayer
     public interface IVersionedPageCache: IDisposable
     {
         /// <summary>
+        /// Returns the page size of the underlying file set
+        /// </summary>
+        uint PageSize { get; }
+
+        /// <summary>
         /// Tells the page cache that a new transaction has started and that
         /// any changes committed by other transactions should not be visible 
         /// to this one.
@@ -50,11 +55,12 @@ namespace RestDB.Interfaces.FileLayer
         /// of a transaction. If the transaction has modified the page then
         /// the returned page will contain these modifications.
         /// </summary>
-        /// <param name="pageNumber">The page number to return</param>
         /// <param name="transaction">The transaction context</param>
         /// <returns>A page from the cache or null if there is no such page.
         /// The page must have Dispose() called when doe accessing it</returns>
-        IPage Get(ITransaction transaction, ulong pageNumber);
+        /// <param name="pageNumber">The page number to return</param>
+        /// <param name="hints">Hints that affevt caching strategy</param>
+        IPage Get(ITransaction transaction, ulong pageNumber, CacheHints hints);
 
         /// <summary>
         /// Updates a page within the context of a transaction. Only this transaction

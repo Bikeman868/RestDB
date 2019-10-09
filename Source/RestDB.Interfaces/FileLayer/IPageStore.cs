@@ -14,6 +14,11 @@
     public interface IPageStore
     {
         /// <summary>
+        /// Returns the size of the pages in bytes
+        /// </summary>
+        uint PageSize { get; }
+
+        /// <summary>
         /// Returns the first page in a chain of pages that contains an index of 
         /// pages for a specific type of object. The application can structure 
         /// this page however it likes including references to continuation pages 
@@ -34,12 +39,12 @@
         /// 128+  Application defined</param>
         /// <returns>The first page of data that contains the index of objects
         /// of a particular type</returns>
-        IPage GetFirstIndexPage(ushort objectType);
+        ulong GetFirstIndexPage(ushort objectType);
 
         /// <summary>
-        /// Creates a new page in the page store with a unique page number
+        /// Allocates a new page in the page store and returns its page number
         /// </summary>
-        IPage Allocate();
+        ulong Allocate();
 
         /// <summary>
         /// Marks a page as available for reuse. This page

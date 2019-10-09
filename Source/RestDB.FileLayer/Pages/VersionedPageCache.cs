@@ -45,6 +45,8 @@ namespace RestDB.FileLayer.Pages
 
         private bool _disposing;
 
+        uint IVersionedPageCache.PageSize => _fileSet.PageSize;
+
         public VersionedPageCache(
             IFileSet fileSet,
             IDatabase database,
@@ -283,7 +285,7 @@ namespace RestDB.FileLayer.Pages
             return _fileSet.FinalizeTransaction(transaction);
         }
 
-        IPage IVersionedPageCache.Get(ITransaction transaction, ulong pageNumber)
+        IPage IVersionedPageCache.Get(ITransaction transaction, ulong pageNumber, CacheHints hints)
         {
             if (transaction != null)
             {
@@ -346,7 +348,7 @@ namespace RestDB.FileLayer.Pages
                     {
                         modifiedPage = _pagePool.Get(update.PageNumber);
 
-                        using (var originalPage = ((IVersionedPageCache)this).Get(transaction, update.PageNumber))
+                        using (var originalPage = ((IVersionedPageCache)this).Get(transaction, update.PageNumber, CacheHints.ForUpdate))
                             originalPage.Data.CopyTo(modifiedPage.Data, 0);
 
                         transactionHead.SetModifiedPage(modifiedPage);
@@ -580,7 +582,8 @@ namespace RestDB.FileLayer.Pages
                     }
                 }
 
-                lock (Updates) Updates.AddRange(updates);
+                var start = (uint)Updates.Count;
+                lock (Updates) Updates.AddRange(updates.Select(u => { u.SequenceNumber += start; return u; }));
             }
 
             public IPage GetModifiedPage(ulong pageNumber)

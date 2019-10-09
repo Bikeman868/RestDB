@@ -19,6 +19,7 @@ namespace RestDB.FileLayer.Pages
         private long _highestPageNumber;
 
         IVersionedPageCache IPageStore.Pages => _pageCache;
+        uint IPageStore.PageSize => _pageCache.PageSize;
 
         public PageStore(IVersionedPageCache pageCache, IStartUpLog startUpLog)
         {
@@ -28,7 +29,7 @@ namespace RestDB.FileLayer.Pages
 
             // The index master page is always page 0
             // This page contains the starting page numbers for other indexes
-            _indexHead = _pageCache.Get(null, 0);
+            _indexHead = _pageCache.Get(null, 0, CacheHints.None);
 
             if (_indexHead == null)
             {
@@ -59,7 +60,7 @@ namespace RestDB.FileLayer.Pages
             // The free page map is always page 1
             // This is the first in a chain of pages used to manage 
             // unused space in the file set
-            _freePageHead = _pageCache.Get(null, 1);
+            _freePageHead = _pageCache.Get(null, 1, CacheHints.None);
 
             if (_freePageHead == null)
             {
@@ -89,19 +90,15 @@ namespace RestDB.FileLayer.Pages
             return "page store on " + _pageCache;
         }
 
-        IPage IPageStore.Allocate()
+        ulong IPageStore.Allocate()
         {
-            var pageNumber = AllocatePageNumber();
-
-            // TODO: ...
-
-            return _pageCache.NewPage(pageNumber);
+            return AllocatePageNumber();
         }
 
-        IPage IPageStore.GetFirstIndexPage(ushort objectType)
+        ulong IPageStore.GetFirstIndexPage(ushort objectType)
         {
             if (objectType == 0)
-                return _freePageHead.Reference();
+                return _freePageHead.PageNumber;
 
             ulong pageNumber;
 
@@ -137,7 +134,7 @@ namespace RestDB.FileLayer.Pages
                 }
             }
 
-            return _pageCache.Get(null, pageNumber);
+            return pageNumber;
         }
 
         void IPageStore.Release(ulong pageNumber)
