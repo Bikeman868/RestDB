@@ -247,12 +247,20 @@ namespace RestDB.FileLayer.Accessors
                     if (nextPageNumber == 0UL || nextOffset == 0U) return null; // End of list
                     if (nextPageNumber == ulong.MaxValue) continue; // Skip over deleted record
 
-                    if (nextPageNumber != priorPageNumber) priorOffset = 0U;
+                    if (nextPageNumber != priorPageNumber)
+                    {
+                        return new PageLocation
+                        {
+                            PageNumber = nextPageNumber,
+                            Offset = 0,
+                            Length = nextOffset
+                        };
+                    }
 
                     return new PageLocation
                     {
                         PageNumber = nextPageNumber,
-                        Offset = nextOffset,
+                        Offset = priorOffset,
                         Length = nextOffset - priorOffset
                     };
                 }
