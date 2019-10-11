@@ -24,10 +24,12 @@ namespace RestDB.FileLayer
                 r.Add(new IocRegistration().Init<IFileSetFactory, FileSets.FileSetFactory>());
                 r.Add(new IocRegistration().Init<IPagePoolFactory, Pages.PagePoolFactory>());
                 r.Add(new IocRegistration().Init<IPageStoreFactory, Pages.PageStoreFactory>());
+                r.Add(new IocRegistration().Init<IAccessorFactory, Accessors.AccessorFactory>());
 
                 // Interface dependencies
 
                 r.Add(new IocRegistration().Init<IStartUpLog>());
+                r.Add(new IocRegistration().Init<IErrorLog>());
 
                 return r;
             }

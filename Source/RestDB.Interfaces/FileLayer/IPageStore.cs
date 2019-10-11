@@ -1,4 +1,6 @@
-﻿namespace RestDB.Interfaces.FileLayer
+﻿using System;
+
+namespace RestDB.Interfaces.FileLayer
 {
     /// <summary>
     /// Provides resilient versioned persistent storage of pages of
@@ -11,7 +13,7 @@
     /// I can find the page number of the Stored Procedure index, then I can read 
     /// this page to get a list of the Stored Procedures in this page store.
     /// </summary>
-    public interface IPageStore
+    public interface IPageStore: IDisposable
     {
         /// <summary>
         /// Returns the size of the pages in bytes

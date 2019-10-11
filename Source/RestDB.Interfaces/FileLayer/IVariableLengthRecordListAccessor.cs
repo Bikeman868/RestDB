@@ -54,7 +54,7 @@ namespace RestDB.Interfaces.FileLayer
         /// <param name="objectType">See GetFirstIndexPage method of IPageStore</param>
         /// <param name="transaction">The transaction context for updating the index</param>
         /// <param name="record">The data to append to the list</param>
-        void Append(
+        PageLocation Append(
             ushort objectType,
             ITransaction transaction,
             byte[] record);

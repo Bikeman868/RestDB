@@ -310,7 +310,7 @@ namespace RestDB.FileLayer.Pages
                 }
             }
 
-            return pageHead.GetVersion(transaction.BeginVersionNumber);
+            return pageHead.GetVersion(transaction);
         }
 
         private IPage GetFromFileSet(ulong pageNumber)
@@ -468,16 +468,18 @@ namespace RestDB.FileLayer.Pages
                 }
             }
 
-            public IPage GetVersion(ulong versionNumber)
+            public IPage GetVersion(ITransaction transaction)
             {
                 EnsureOriginalVersion();
 
-                var pageVersionElement = Versions.FirstElementOrDefault(pv => pv.VersionNumber <= versionNumber);
+                var pageVersionElement = transaction == null 
+                    ? Versions.FirstElementOrDefault()
+                    : Versions.FirstElementOrDefault(pv => pv.VersionNumber <= transaction.BeginVersionNumber);
 
                 if (pageVersionElement == null)
                     throw new FileLayerException(
                         "No suitable version in the VersionPageCache. Theoretically this can never "+
-                        "happen so there is a bug in the code. Page number " + PageNumber + " version " + versionNumber);
+                        "happen so there is a bug in the code. Page number " + PageNumber + " transaction " + transaction);
 
                 return pageVersionElement.Data.Page.Reference();
             }

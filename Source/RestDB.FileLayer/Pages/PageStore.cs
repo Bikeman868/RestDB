@@ -81,8 +81,16 @@ namespace RestDB.FileLayer.Pages
             else
             {
                 _highestPageNumber = (long)BitConverter.ToUInt64(_freePageHead.Data, 0);
-                startUpLog.Write("This file set contains " + _highestPageNumber + " pages");
+                startUpLog.Write("This page store contains " + _highestPageNumber + " pages");
             }
+        }
+
+        public void Dispose()
+        {
+            _startUpLog.Write("Disposing of " + this);
+
+            if (_pageCache != null)
+                _pageCache.Dispose();
         }
 
         public override string ToString()
