@@ -19,7 +19,7 @@ namespace RestDB.UnitTests.FileLayer
 
         IPagePoolFactory _pagePoolFactory;
         IPagePool _pagePool;
-        IStartUpLog _startUpLog;
+        IStartupLog _startUpLog;
 
         FileInfo _logFileInfo1;
         FileInfo _logFileInfo2;
@@ -34,7 +34,7 @@ namespace RestDB.UnitTests.FileLayer
         [SetUp]
         public void SetUp()
         {
-            _startUpLog = SetupMock<IStartUpLog>();
+            _startUpLog = SetupMock<IStartupLog>();
             _pagePoolFactory = SetupMock<IPagePoolFactory>();
             _pagePool = _pagePoolFactory.Create(_pageSize);
 
@@ -100,7 +100,7 @@ namespace RestDB.UnitTests.FileLayer
 
             var pageStore = pageStoreFactory.Open(_fileSet);
             var database = databaseFactory.Open(pageStore);
-            var transaction = database.BeginTransaction();
+            var transaction = database.BeginTransaction(null);
 
             _fileSet.Write(
                 transaction,
@@ -162,9 +162,9 @@ namespace RestDB.UnitTests.FileLayer
 
             var pageStore = pageStoreFactory.Open(_fileSet);
             var database = databaseFactory.Open(pageStore);
-            var transaction1 = database.BeginTransaction();
-            var transaction2 = database.BeginTransaction();
-            var transaction3 = database.BeginTransaction();
+            var transaction1 = database.BeginTransaction(null);
+            var transaction2 = database.BeginTransaction(null);
+            var transaction3 = database.BeginTransaction(null);
 
             _fileSet.Write(
                 transaction1,
@@ -272,7 +272,7 @@ namespace RestDB.UnitTests.FileLayer
             var pageStore = pageStoreFactory.Open(_fileSet);
             var database = databaseFactory.Open(pageStore);
 
-            var transaction1 = database.BeginTransaction();
+            var transaction1 = database.BeginTransaction(null);
             _fileSet.Write(
                 transaction1,
                 new[] {
@@ -286,7 +286,7 @@ namespace RestDB.UnitTests.FileLayer
                 });
             database.CommitTransaction(transaction1);
 
-            var transaction2 = database.BeginTransaction();
+            var transaction2 = database.BeginTransaction(null);
             _fileSet.Write(
                 transaction2,
                 new[] {
@@ -300,7 +300,7 @@ namespace RestDB.UnitTests.FileLayer
                 });
             database.CommitTransaction(transaction2);
 
-            var transaction3 = database.BeginTransaction();
+            var transaction3 = database.BeginTransaction(null);
             _fileSet.Write(
                 transaction3,
                 new[] {
@@ -404,7 +404,7 @@ namespace RestDB.UnitTests.FileLayer
             var pageStore = pageStoreFactory.Open(_fileSet);
             var database = databaseFactory.Open(pageStore);
 
-            var transaction1 = database.BeginTransaction();
+            var transaction1 = database.BeginTransaction(null);
             _fileSet.Write(
                 transaction1,
                 new[] {
@@ -418,7 +418,7 @@ namespace RestDB.UnitTests.FileLayer
                 });
             database.CommitTransaction(transaction1);
 
-            var transaction2 = database.BeginTransaction();
+            var transaction2 = database.BeginTransaction(null);
             _fileSet.Write(
                 transaction2,
                 new[] {
@@ -432,7 +432,7 @@ namespace RestDB.UnitTests.FileLayer
                 });
             database.CommitTransaction(transaction2);
 
-            var transaction3 = database.BeginTransaction();
+            var transaction3 = database.BeginTransaction(null);
             _fileSet.Write(
                 transaction3,
                 new[] {

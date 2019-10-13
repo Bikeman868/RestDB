@@ -1,17 +1,13 @@
 ﻿using RestDB.Interfaces.DatabaseLayer;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace RestDB.Interfaces.FileLayer
 {
     /// <summary>
     ///  Provides methods for manipulating a list of variable length records that
-    ///  are stored in an IPageStore. This is used for managing lists of databases, tables
-    ///  indexes, user defined types etc.
-    ///  This is not suitable for maintaining a list of rows in a table
+    ///  are stored sequentially in an IPageStore. This is used for managing lists
+    ///  of databases, tables  indexes, user defined types etc.
     /// </summary>
-    public interface IVariableLengthRecordListAccessor
+    public interface ISequentialRecordAccessor
     {
         /// <summary>
         /// Locates the first object in the list
@@ -24,7 +20,7 @@ namespace RestDB.Interfaces.FileLayer
         PageLocation LocateFirst(
             ushort objectType, 
             ITransaction transaction, 
-            out PageLocation indexLocation);
+            out object indexLocation);
 
         /// <summary>
         /// Locates the next object in the list
@@ -37,7 +33,7 @@ namespace RestDB.Interfaces.FileLayer
         PageLocation LocateNext(
             ushort objectType,
             ITransaction transaction,
-            PageLocation indexLocation);
+            object indexLocation);
 
         /// <summary>
         /// Empties the list. To rewrite the list (for example in a different order,
@@ -70,6 +66,6 @@ namespace RestDB.Interfaces.FileLayer
         void Delete(
             ushort objectType,
             ITransaction transaction,
-            PageLocation indexLocation);
+            object indexLocation);
     }
 }

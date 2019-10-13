@@ -8,11 +8,11 @@ namespace RestDB.FileLayer.Pages
 {
     internal class PagePoolFactory : IPagePoolFactory
     {
-        readonly IStartUpLog _startUpLog;
+        readonly IStartupLog _startUpLog;
 
         readonly IDictionary<uint, PagePool> _pagePools;
 
-        public PagePoolFactory(IStartUpLog startUpLog)
+        public PagePoolFactory(IStartupLog startUpLog)
         {
             _startUpLog = startUpLog;
             _pagePools = new Dictionary<uint, PagePool>();

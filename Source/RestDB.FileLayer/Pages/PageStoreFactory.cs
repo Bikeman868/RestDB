@@ -8,12 +8,12 @@ namespace RestDB.FileLayer.Pages
 {
     internal class PageStoreFactory : IPageStoreFactory
     {
-        readonly IVersionedPageCache _pageCache;
-        readonly IStartUpLog _startUpLog;
+        readonly IPageCache _pageCache;
+        readonly IStartupLog _startUpLog;
 
         public PageStoreFactory(
-            IVersionedPageCache pageCache,
-            IStartUpLog startUpLog)
+            IPageCache pageCache,
+            IStartupLog startUpLog)
         {
             _pageCache = pageCache;
             _startUpLog = startUpLog;

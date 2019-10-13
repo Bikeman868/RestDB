@@ -6,9 +6,9 @@ namespace RestDB.FileLayer.DataFiles
 {
     internal class DataFileFactory : IDataFileFactory
     {
-        readonly IStartUpLog _startupLog;
+        readonly IStartupLog _startupLog;
 
-        public DataFileFactory(IStartUpLog startupLog)
+        public DataFileFactory(IStartupLog startupLog)
         {
             _startupLog = startupLog;
         }

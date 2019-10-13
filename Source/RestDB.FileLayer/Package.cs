@@ -28,7 +28,7 @@ namespace RestDB.FileLayer
 
                 // Interface dependencies
 
-                r.Add(new IocRegistration().Init<IStartUpLog>());
+                r.Add(new IocRegistration().Init<IStartupLog>());
                 r.Add(new IocRegistration().Init<IErrorLog>());
 
                 return r;

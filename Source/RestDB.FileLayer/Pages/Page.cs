@@ -4,6 +4,10 @@ using System.Threading;
 
 namespace RestDB.FileLayer.Pages
 {
+    /// <summary>
+    ///  Contains one page of data from a file set. These page objects
+    ///  are pooled and reused to avoid reallocating the byte[]
+    /// </summary>
     internal class Page : IPage
     {
         ulong IPage.PageNumber => _pageNumber;

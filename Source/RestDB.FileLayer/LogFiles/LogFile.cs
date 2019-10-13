@@ -11,18 +11,18 @@ namespace RestDB.FileLayer.LogFiles
     {
         readonly ILogFile _versionLogFile;
         readonly FileInfo _file;
-        readonly IStartUpLog _startupLog;
+        readonly IStartupLog _startupLog;
 
-        public LogFile(FileInfo file, bool initialize, IStartUpLog startupLog)
+        public LogFile(FileInfo file, bool initialize, IStartupLog startupLog)
         {
             _file = file;
             _startupLog = startupLog;
 
-            startupLog.Write((initialize ? "Initializing" : "Opening") + " log file " +  file.FullName);
+            startupLog.WriteLine((initialize ? "Initializing" : "Opening") + " log file " +  file.FullName);
 
             if (!file.Exists)
             {
-                startupLog.Write("Log file does not exist, we will try to create it");
+                startupLog.WriteLine("Log file does not exist, we will try to create it");
                 initialize = true;
             }
 
@@ -30,11 +30,11 @@ namespace RestDB.FileLayer.LogFiles
             {
                 if (!file.Directory.Exists)
                 {
-                    startupLog.Write("The log file directory " + file.Directory.FullName + " does not exist, we will try to create it");
+                    startupLog.WriteLine("The log file directory " + file.Directory.FullName + " does not exist, we will try to create it");
                     file.Directory.Create();
                 }
 
-                startupLog.Write("Creating a version 1 log file in " + file.FullName);
+                startupLog.WriteLine("Creating a version 1 log file in " + file.FullName);
                 var fileStream = file.Open(FileMode.Create, FileAccess.ReadWrite, FileShare.None);
                 _versionLogFile = new LogFileV1(fileStream, true);
             }
@@ -46,14 +46,14 @@ namespace RestDB.FileLayer.LogFiles
                 fileStream.Read(buffer, 0, 4);
                 var version = BitConverter.ToUInt32(buffer, 0);
 
-                startupLog.Write("Log file " + file.FullName + " is version " + version + " format");
+                startupLog.WriteLine("Log file " + file.FullName + " is version " + version + " format");
 
                 if (version == 1)
                     _versionLogFile = new LogFileV1(fileStream, false);
                 else
                 {
                     fileStream.Close();
-                    startupLog.Write("Log file version " + version + " is not supported in this version of the software, please install the latest software", true);
+                    startupLog.WriteLine("Log file version " + version + " is not supported in this version of the software, please install the latest software", true);
                     throw new UnsupportedVersionException(version, 1, "Log file", file.FullName);
                 }
             }
@@ -61,7 +61,7 @@ namespace RestDB.FileLayer.LogFiles
 
         void IDisposable.Dispose()
         {
-            _startupLog.Write("Closing log file " + _file.FullName);
+            _startupLog.WriteLine("Closing log file " + _file.FullName);
             _versionLogFile.Dispose();
         }
 

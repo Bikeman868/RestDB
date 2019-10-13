@@ -25,11 +25,16 @@ namespace RestDB.Interfaces
         /// <summary>
         /// The data is being requested as part of an index scan
         /// </summary>
-        IndexScan,
+        IndexScan = 0x4,
 
         /// <summary>
         /// The requested data will be updated later
         /// </summary>
         ForUpdate = 0x8,
+
+        /// <summary>
+        /// The requested data will be locked by the requesting transaction
+        /// </summary>
+        WithLock = 0x18,
     }
 }

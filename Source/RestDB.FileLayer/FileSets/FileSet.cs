@@ -10,7 +10,7 @@ namespace RestDB.FileLayer.FileSets
     internal class FileSet : IFileSet
     {
         readonly IPagePool _pagePool;
-        readonly IStartUpLog _startUpLog;
+        readonly IStartupLog _startUpLog;
         readonly IDataFile[] _dataFiles;
         readonly ILogFile[] _logFiles;
         readonly uint _pageSize;
@@ -22,33 +22,33 @@ namespace RestDB.FileLayer.FileSets
             IEnumerable<IDataFile> dataFiles, 
             IEnumerable<ILogFile> logFiles, 
             IPagePoolFactory pagePoolFactory,
-            IStartUpLog startUpLog)
+            IStartupLog startUpLog)
         {
             _startUpLog = startUpLog;
             _dataFiles = dataFiles.ToArray();
             _logFiles = logFiles.ToArray();
 
-            startUpLog.Write("Opening a file set with " + _dataFiles.Length + " data files and " + _logFiles.Length + " log files", _dataFiles.Length < 1 || _logFiles.Length < 1);
+            startUpLog.WriteLine("Opening a file set with " + _dataFiles.Length + " data files and " + _logFiles.Length + " log files", _dataFiles.Length < 1 || _logFiles.Length < 1);
 
             if (_dataFiles.Length < 1) throw new FileLayerException("You must have at least 1 data file");
             if (_logFiles.Length < 1) throw new FileLayerException("You must have at least 1 log file");
 
             foreach (var dataFile in _dataFiles)
-                startUpLog.Write("- " + dataFile);
+                startUpLog.WriteLine("- " + dataFile);
 
             foreach (var logFile in _logFiles)
-                startUpLog.Write("- " + logFile);
+                startUpLog.WriteLine("- " + logFile);
 
             _pageSize = _dataFiles[0].PageSize;
             if (_dataFiles.Any(df => df.PageSize != _pageSize))
             {
-                startUpLog.Write("Data files can not be mixed, these files are not a file set", true);
+                startUpLog.WriteLine("Data files can not be mixed, these files are not a file set", true);
                 throw new FileLayerException("All of the data files must have the same page size");
             }
 
             if (_dataFiles.Length > 64)
             {
-                startUpLog.Write("You can not have more than 64 data files in a file set", true);
+                startUpLog.WriteLine("You can not have more than 64 data files in a file set", true);
                 throw new FileLayerException("The maximum number of data files is 64");
             }
 
@@ -60,16 +60,16 @@ namespace RestDB.FileLayer.FileSets
         public void Dispose()
         {
             // TODO: Abort background thread
-            _startUpLog.Write("File set waiting for background thread to finish");
+            _startUpLog.WriteLine("File set waiting for background thread to finish");
             // TODO: Wait for background thread
 
-            _startUpLog.Write("Closing file set files");
+            _startUpLog.WriteLine("Closing file set files");
 
             foreach (var dataFile in _dataFiles)
-                _startUpLog.Write("- " + dataFile);
+                _startUpLog.WriteLine("- " + dataFile);
 
             foreach (var logFile in _logFiles)
-                _startUpLog.Write("- " + logFile);
+                _startUpLog.WriteLine("- " + logFile);
 
             foreach (var logFile in _logFiles) logFile.Dispose();
             foreach(var dataFile in _dataFiles) dataFile.Dispose();

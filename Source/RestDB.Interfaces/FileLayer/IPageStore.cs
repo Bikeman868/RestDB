@@ -13,13 +13,8 @@ namespace RestDB.Interfaces.FileLayer
     /// I can find the page number of the Stored Procedure index, then I can read 
     /// this page to get a list of the Stored Procedures in this page store.
     /// </summary>
-    public interface IPageStore: IDisposable
+    public interface IPageStore: IPageCache
     {
-        /// <summary>
-        /// Returns the size of the pages in bytes
-        /// </summary>
-        uint PageSize { get; }
-
         /// <summary>
         /// Returns the first page in a chain of pages that contains an index of 
         /// pages for a specific type of object. The application can structure 
@@ -54,10 +49,5 @@ namespace RestDB.Interfaces.FileLayer
         /// Allocate()
         /// </summary>
         void Release(ulong pageNumber);
-
-        /// <summary>
-        /// Provides access to the pages in this page store
-        /// </summary>
-        IVersionedPageCache Pages { get; }
     }
 }

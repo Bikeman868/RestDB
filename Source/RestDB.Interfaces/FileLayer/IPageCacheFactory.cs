@@ -6,11 +6,11 @@ namespace RestDB.Interfaces.FileLayer
     /// Wraps a file set, adding caching and merging of pending writes
     /// into read operations within transaction contexts
     /// </summary>
-    public interface IVersionedPageCacheFactory
+    public interface IPageCacheFactory
     {
         /// <summary>
         /// Creates a cache on top of a file set
         /// </summary>
-        IVersionedPageCache Create(IDatabase database, IFileSet fileSet);
+        IPageCache Create(IDatabase database, IFileSet fileSet);
     }
 }

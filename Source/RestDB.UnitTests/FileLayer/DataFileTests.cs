@@ -10,7 +10,7 @@ namespace RestDB.UnitTests.FileLayer
 {
     public class DataFileTests : TestBase
     {
-        IStartUpLog _startupLog;
+        IStartupLog _startupLog;
         FileInfo _file;
         IDataFile _dataFile;
         uint _pageSize = 32;
@@ -18,7 +18,7 @@ namespace RestDB.UnitTests.FileLayer
         [SetUp]
         public void Setup()
         {
-            _startupLog = SetupMock<IStartUpLog>();
+            _startupLog = SetupMock<IStartupLog>();
             _file = new FileInfo("C:\\temp\\test.mdf");
             _dataFile = new DataFile(_file, _pageSize, _startupLog);
         }

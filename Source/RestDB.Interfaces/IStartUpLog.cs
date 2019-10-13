@@ -9,8 +9,8 @@ namespace RestDB.Interfaces
     /// of startup and shutdown events. Includes the files that were opened, the state
     /// of those files, transactions that were rolled back or forward at stratup etc.
     /// </summary>
-    public interface IStartUpLog
+    public interface IStartupLog
     {
-        IStartUpLog Write(string message, bool isError = false);
+        IStartupLog WriteLine(string message, bool isError = false);
     }
 }

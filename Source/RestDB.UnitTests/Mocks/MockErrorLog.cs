@@ -10,7 +10,7 @@ namespace RestDB.UnitTests.Mocks
     {
         protected override void SetupMock(IMockProducer mockProducer, Mock<IErrorLog> mock)
         {
-            mock.Setup(o => o.Write(It.IsAny<string>(), It.IsAny<Exception>()))
+            mock.Setup(o => o.WriteLine(It.IsAny<string>(), It.IsAny<Exception>()))
                 .Returns<string, Exception>((message, exception) =>
                 {
                     Console.WriteLine("ERROR: " + message);

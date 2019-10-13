@@ -67,11 +67,12 @@ namespace RestDB.UnitTests.Mocks.DatabaseLayer
             {
             }
 
-            public ITransaction BeginTransaction()
+            public ITransaction BeginTransaction(ITransaction parentTransaction)
             {
                 return new Transaction
                 {
                     TransactionId = ++_nextTransactionId,
+                    ParentTransactionId = (parentTransaction == null ? (ulong?)null : parentTransaction.TransactionId),
                     BeginVersionNumber = _version,
                     CommitVersionNumber = _version
                 };
@@ -115,6 +116,8 @@ namespace RestDB.UnitTests.Mocks.DatabaseLayer
             private class Transaction : ITransaction
             {
                 public ulong TransactionId { get; set; }
+
+                public ulong? ParentTransactionId { get; set; }
 
                 public ulong BeginVersionNumber { get; set; }
 

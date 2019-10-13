@@ -9,9 +9,9 @@ namespace RestDB.FileLayer.LogFiles
 {
     internal class LogFileFactory : ILogFileFactory
     {
-        readonly IStartUpLog _startupLog;
+        readonly IStartupLog _startupLog;
 
-        public LogFileFactory(IStartUpLog startupLog)
+        public LogFileFactory(IStartupLog startupLog)
         {
             _startupLog = startupLog;
         }

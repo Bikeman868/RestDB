@@ -11,14 +11,14 @@ namespace RestDB.UnitTests.FileLayer
 {
     public class LogFileTests : TestBase
     {
-        IStartUpLog _startupLog;
+        IStartupLog _startupLog;
         FileInfo _file;
         ILogFile _logFile;
 
         [SetUp]
         public void Setup()
         {
-            _startupLog = SetupMock<IStartUpLog>();
+            _startupLog = SetupMock<IStartupLog>();
             _file = new FileInfo("C:\\temp\\test.ldf");
             _logFile = new LogFile(_file, true, _startupLog);
         }
@@ -27,8 +27,11 @@ namespace RestDB.UnitTests.FileLayer
         public void TearDown()
         {
             Console.WriteLine();
+
             if (_logFile != null)
                 _logFile.Dispose();
+
+            Reset();
         }
 
         [Test]
@@ -145,6 +148,8 @@ namespace RestDB.UnitTests.FileLayer
         private class Transaction : ITransaction
         {
             public ulong TransactionId { get; set; }
+
+            public ulong? ParentTransactionId { get; set; }
 
             public ulong BeginVersionNumber { get; set; }
 

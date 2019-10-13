@@ -13,9 +13,9 @@ namespace RestDB.FileLayer.Pages
 
         uint IPagePool.PageSize => _pageSize;
 
-        public PagePool(uint pageSize, IStartUpLog startUpLog)
+        public PagePool(uint pageSize, IStartupLog startUpLog)
         {
-            startUpLog.Write("Creating a page pool for " + pageSize + " byte pages");
+            startUpLog.WriteLine("Creating a page pool for " + pageSize + " byte pages");
 
             _pageSize = pageSize;
             _pages = new LinkedList<Page>();

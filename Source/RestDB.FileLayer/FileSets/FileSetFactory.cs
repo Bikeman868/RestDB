@@ -7,10 +7,10 @@ namespace RestDB.FileLayer.FileSets
     internal class FileSetFactory : IFileSetFactory
     {
         private readonly IPagePoolFactory _pagePoolFactory;
-        private readonly IStartUpLog _startUpLog;
+        private readonly IStartupLog _startUpLog;
 
         public FileSetFactory(
-            IStartUpLog startUpLog,
+            IStartupLog startUpLog,
             IPagePoolFactory pagePoolFactory)
         {
             _startUpLog = startUpLog;

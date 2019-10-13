@@ -4,15 +4,15 @@ using RestDB.Interfaces.FileLayer;
 
 namespace RestDB.FileLayer.Pages
 {
-    internal class VersionedPageCacheFactory : IVersionedPageCacheFactory
+    internal class PageCacheFactory : IPageCacheFactory
     {
         private readonly IPagePoolFactory _pagePoolFactory;
-        private readonly IStartUpLog _startUpLog;
+        private readonly IStartupLog _startUpLog;
         private readonly IErrorLog _errorLog;
 
-        public VersionedPageCacheFactory(
+        public PageCacheFactory(
             IPagePoolFactory pagePoolFactory,
-            IStartUpLog startUpLog,
+            IStartupLog startUpLog,
             IErrorLog errorLog)
         {
             _pagePoolFactory = pagePoolFactory;
@@ -20,9 +20,9 @@ namespace RestDB.FileLayer.Pages
             _errorLog = errorLog;
         }
 
-        IVersionedPageCache IVersionedPageCacheFactory.Create(IDatabase database, IFileSet fileSet)
+        IPageCache IPageCacheFactory.Create(IDatabase database, IFileSet fileSet)
         {
-            return new VersionedPageCache(fileSet, database, _pagePoolFactory, _startUpLog, _errorLog);
+            return new PageCache(fileSet, database, _pagePoolFactory, _startUpLog, _errorLog);
         }
     }
 }

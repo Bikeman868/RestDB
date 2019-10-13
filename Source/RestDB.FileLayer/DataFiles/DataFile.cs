@@ -10,15 +10,15 @@ namespace RestDB.FileLayer.DataFiles
     internal partial class DataFile : IDataFile
     {
         readonly FileInfo _file;
-        readonly IStartUpLog _startupLog;
+        readonly IStartupLog _startupLog;
         readonly IDataFile _versionDataFile;
 
-        public DataFile(FileInfo file, uint pageSize, IStartUpLog startupLog)
+        public DataFile(FileInfo file, uint pageSize, IStartupLog startupLog)
         {
             _file = file;
             _startupLog = startupLog;
 
-            startupLog.Write("Creating/overwriting version 1 data file " + file.FullName + " with page size " + pageSize);
+            startupLog.WriteLine("Creating/overwriting version 1 data file " + file.FullName + " with page size " + pageSize);
 
             var fileStream = file.Open(FileMode.Create, FileAccess.ReadWrite, FileShare.None);
 
@@ -28,12 +28,12 @@ namespace RestDB.FileLayer.DataFiles
             _versionDataFile = new DataFileV1(fileStream, pageSize);
         }
 
-        public DataFile(FileInfo file, IStartUpLog startupLog)
+        public DataFile(FileInfo file, IStartupLog startupLog)
         {
             _file = file;
             _startupLog = startupLog;
 
-            startupLog.Write("Opening existing data file " + file.FullName);
+            startupLog.WriteLine("Opening existing data file " + file.FullName);
 
             var fileStream = file.Open(FileMode.Open, FileAccess.ReadWrite, FileShare.None);
 
@@ -41,13 +41,13 @@ namespace RestDB.FileLayer.DataFiles
             fileStream.Read(buffer, 0, 4);
             var version = BitConverter.ToUInt32(buffer, 0);
 
-            startupLog.Write("Data file " + file.FullName + " is version " + version);
+            startupLog.WriteLine("Data file " + file.FullName + " is version " + version);
 
             if (version == 1)
                 _versionDataFile = new DataFileV1(fileStream);
             else
             {
-                startupLog.Write("Data file version " + version + " is not supported in this version of the software, please install the latest software", true);
+                startupLog.WriteLine("Data file version " + version + " is not supported in this version of the software, please install the latest software", true);
                 fileStream.Close();
                 throw new UnsupportedVersionException(version, 1, "Data file", file.FullName);
             }
@@ -57,7 +57,7 @@ namespace RestDB.FileLayer.DataFiles
 
         void IDisposable.Dispose()
         {
-            _startupLog.Write("Closing data file " + _file.FullName);
+            _startupLog.WriteLine("Closing data file " + _file.FullName);
             _versionDataFile.Dispose();
         }
 

@@ -6,7 +6,11 @@ using System.Collections.Generic;
 
 namespace RestDB.FileLayer.Accessors
 {
-    internal class VariableLengthRecordListAccessor : IVariableLengthRecordListAccessor
+    /// <summary>
+    /// Implements ISequentialRecordAccessor for a short list of small records.
+    /// Each record in the list can not exceed the page size of the page store.
+    /// </summary>
+    internal class SmallSequentialAccessor : ISequentialRecordAccessor
     {
         private IPageStore _pageStore;
 
@@ -14,12 +18,12 @@ namespace RestDB.FileLayer.Accessors
         private const uint _indexPageHeadSize = 8U;
         private const uint _pageNumberSize = 8U;
 
-        public VariableLengthRecordListAccessor(IPageStore pageStore)
+        public SmallSequentialAccessor(IPageStore pageStore)
         {
             _pageStore = pageStore;
         }
 
-        PageLocation IVariableLengthRecordListAccessor.Append(
+        PageLocation ISequentialRecordAccessor.Append(
             ushort objectType, 
             ITransaction transaction, 
             byte[] record)
@@ -49,7 +53,9 @@ namespace RestDB.FileLayer.Accessors
 
             while (true)
             {
-                using (var indexPage = _pageStore.Pages.Get(transaction, indexLocation.PageNumber, CacheHints.MetaData))
+                _pageStore.Lock(transaction, indexLocation.PageNumber);
+
+                using (var indexPage = _pageStore.Get(transaction, indexLocation.PageNumber, CacheHints.MetaData))
                 {
                     var nextIndexPageNumber = BitConverter.ToUInt64(indexPage.Data, 0);
                     if (nextIndexPageNumber == 0UL)
@@ -73,7 +79,7 @@ namespace RestDB.FileLayer.Accessors
 
                             nextIndexOffset += _indexEntrySize;
 
-                            if (nextIndexOffset > pageSize)
+                            if (nextIndexOffset + _indexEntrySize > pageSize)
                             {
                                 var newIndexPageNumber = _pageStore.Allocate();
 
@@ -135,16 +141,16 @@ namespace RestDB.FileLayer.Accessors
                 });
             }
 
-            _pageStore.Pages.Update(transaction, updates);
+            _pageStore.Update(transaction, updates);
 
             return recordLocation;
         }
 
-        void IVariableLengthRecordListAccessor.Clear(
+        void ISequentialRecordAccessor.Clear(
             ushort objectType,
             ITransaction transaction)
         {
-            _pageStore.Pages.Update(
+            _pageStore.Update(
                 transaction, 
                 new[] 
                 {
@@ -156,46 +162,51 @@ namespace RestDB.FileLayer.Accessors
                 });
         }
 
-        void IVariableLengthRecordListAccessor.Delete(
+        void ISequentialRecordAccessor.Delete(
             ushort objectType, 
-            ITransaction transaction, 
-            PageLocation indexLocation)
+            ITransaction transaction,
+            object indexLocation)
         {
-            _pageStore.Pages.Update(
+            var indexPageLocation = (PageLocation)indexLocation;
+
+            _pageStore.Lock(transaction, indexPageLocation.PageNumber);
+
+            _pageStore.Update(
                 transaction,
                 new[]
                 {
                     new PageUpdate
                     {
                         SequenceNumber = 0,
-                        PageNumber = indexLocation.PageNumber,
-                        Offset = indexLocation.Offset,
+                        PageNumber = indexPageLocation.PageNumber,
+                        Offset = indexPageLocation.Offset,
                         Data = new byte[]{ 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff }
                     }
                 });
         }
 
-        PageLocation IVariableLengthRecordListAccessor.LocateFirst(
+        PageLocation ISequentialRecordAccessor.LocateFirst(
             ushort objectType, 
             ITransaction transaction, 
-            out PageLocation indexLocation)
+            out object indexLocation)
         {
-            indexLocation = new PageLocation
+            var indexPageLocation = new PageLocation
             {
                 PageNumber = _pageStore.GetFirstIndexPage(objectType),
                 Offset = _indexPageHeadSize,
                 Length = _indexEntrySize
             };
+            indexLocation = indexPageLocation;
 
-            using (var indexPage = _pageStore.Pages.Get(transaction, indexLocation.PageNumber, CacheHints.MetaData))
+            using (var indexPage = _pageStore.Get(transaction, indexPageLocation.PageNumber, CacheHints.MetaData))
             {
-                var pageNumber = BitConverter.ToUInt64(indexPage.Data, (int)indexLocation.Offset);
-                var nextRecordOffset = BitConverter.ToUInt32(indexPage.Data, (int)(indexLocation.Offset + _pageNumberSize));
+                var pageNumber = BitConverter.ToUInt64(indexPage.Data, (int)indexPageLocation.Offset);
+                var nextRecordOffset = BitConverter.ToUInt32(indexPage.Data, (int)(indexPageLocation.Offset + _pageNumberSize));
 
                 if (pageNumber == 0UL) return null;
 
                 if (pageNumber == ulong.MaxValue) // First record was deleted
-                    return ((IVariableLengthRecordListAccessor)this).LocateNext(objectType, transaction, indexLocation);
+                    return ((ISequentialRecordAccessor)this).LocateNext(objectType, transaction, indexLocation);
 
                 return new PageLocation
                 {
@@ -206,43 +217,44 @@ namespace RestDB.FileLayer.Accessors
             }
         }
 
-        PageLocation IVariableLengthRecordListAccessor.LocateNext(
+        PageLocation ISequentialRecordAccessor.LocateNext(
             ushort objectType, 
-            ITransaction transaction, 
-            PageLocation indexLocation)
+            ITransaction transaction,
+            object indexLocation)
         {
+            var indexPageLocation = (PageLocation)indexLocation;
+            var newIndexPage = false;
+
             while (true)
             {
-                if (indexLocation.PageNumber == 0UL) return null;
+                if (indexPageLocation.PageNumber == 0UL) return null;
 
-                using (var indexPage = _pageStore.Pages.Get(transaction, indexLocation.PageNumber, CacheHints.MetaData))
+                using (var indexPage = _pageStore.Get(transaction, indexPageLocation.PageNumber, CacheHints.MetaData))
                 {
                     var nextIndexPageNumber = BitConverter.ToUInt64(indexPage.Data, 0);
-                    var priorPageNumber = BitConverter.ToUInt64(indexPage.Data, (int)indexLocation.Offset);
-                    var priorOffset = BitConverter.ToUInt32(indexPage.Data, (int)(indexLocation.Offset + _pageNumberSize));
+                    var priorPageNumber = BitConverter.ToUInt64(indexPage.Data, (int)indexPageLocation.Offset);
+                    var priorOffset = BitConverter.ToUInt32(indexPage.Data, (int)(indexPageLocation.Offset + _pageNumberSize));
 
                     ulong nextPageNumber;
                     uint nextOffset;
 
-                    if (indexLocation.Offset + indexLocation.Length >= _pageStore.PageSize)
+                    if (newIndexPage)
+                        newIndexPage = false;
+                    else
+                        indexPageLocation.Offset += _indexEntrySize;
+
+                    if (indexPageLocation.Offset + _indexEntrySize > _pageStore.PageSize)
                     {
                         if (nextIndexPageNumber == 0UL) return null;
 
-                        indexLocation.PageNumber = nextIndexPageNumber;
-                        indexLocation.Offset = _indexPageHeadSize;
+                        indexPageLocation.PageNumber = nextIndexPageNumber;
+                        indexPageLocation.Offset = _indexPageHeadSize;
+                        newIndexPage = true;
+                        continue;
+                    }
 
-                        using (var nextIndexPage = _pageStore.Pages.Get(transaction, nextIndexPageNumber, CacheHints.MetaData))
-                        {
-                            nextPageNumber = BitConverter.ToUInt64(nextIndexPage.Data, (int)indexLocation.Offset);
-                            nextOffset = BitConverter.ToUInt32(nextIndexPage.Data, (int)(indexLocation.Offset + _pageNumberSize));
-                        }
-                    }
-                    else
-                    {
-                        indexLocation.Offset += _indexEntrySize;
-                        nextPageNumber = BitConverter.ToUInt64(indexPage.Data, (int)indexLocation.Offset);
-                        nextOffset = BitConverter.ToUInt32(indexPage.Data, (int)(indexLocation.Offset + _pageNumberSize));
-                    }
+                    nextPageNumber = BitConverter.ToUInt64(indexPage.Data, (int)indexPageLocation.Offset);
+                    nextOffset = BitConverter.ToUInt32(indexPage.Data, (int)(indexPageLocation.Offset + _pageNumberSize));
 
                     if (nextPageNumber == 0UL || nextOffset == 0U) return null; // End of list
                     if (nextPageNumber == ulong.MaxValue) continue; // Skip over deleted record

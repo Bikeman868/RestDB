@@ -1,16 +1,18 @@
 ﻿using RestDB.Interfaces;
+using RestDB.Interfaces.DatabaseLayer;
 using RestDB.Interfaces.FileLayer;
 using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace RestDB.FileLayer.Pages
 {
     internal class PageStore : IPageStore
     {
-        private readonly IVersionedPageCache _pageCache;
-        private readonly IStartUpLog _startUpLog;
+        private readonly IPageCache _pageCache;
+        private readonly IStartupLog _startUpLog;
 
         private readonly IDictionary<ushort, ulong> _indexPages;
         private readonly IPage _indexHead;
@@ -18,10 +20,7 @@ namespace RestDB.FileLayer.Pages
 
         private long _highestPageNumber;
 
-        IVersionedPageCache IPageStore.Pages => _pageCache;
-        uint IPageStore.PageSize => _pageCache.PageSize;
-
-        public PageStore(IVersionedPageCache pageCache, IStartUpLog startUpLog)
+        public PageStore(IPageCache pageCache, IStartupLog startUpLog)
         {
             _pageCache = pageCache;
             _startUpLog = startUpLog;
@@ -33,12 +32,12 @@ namespace RestDB.FileLayer.Pages
 
             if (_indexHead == null)
             {
-                startUpLog.Write("Creating a new page store in a set of empty data files from " + _pageCache);
+                startUpLog.WriteLine("Creating a new page store in a set of empty data files from " + _pageCache);
                 _indexHead = _pageCache.NewPage(0);
             }
             else
             {
-                startUpLog.Write("Opening a page store on " + _pageCache);
+                startUpLog.WriteLine("Opening a page store on " + _pageCache);
 
                 var offset = 0;
                 ushort objectType;
@@ -49,7 +48,7 @@ namespace RestDB.FileLayer.Pages
                     startPage = BitConverter.ToUInt64(_indexHead.Data, offset + 2);
                     if (objectType > 0)
                     {
-                        startUpLog.Write("- the index for type " + objectType + " objects starts at page " + startPage);
+                        startUpLog.WriteLine("- the index for type " + objectType + " objects starts at page " + startPage);
                         _indexPages[objectType] = startPage;
                     }
                     else break;
@@ -64,7 +63,7 @@ namespace RestDB.FileLayer.Pages
 
             if (_freePageHead == null)
             {
-                startUpLog.Write("Initializing a new free page map in this page store");
+                startUpLog.WriteLine("Initializing a new free page map in this page store");
 
                 _freePageHead = _pageCache.NewPage(1);
                 _highestPageNumber = 1;
@@ -81,13 +80,13 @@ namespace RestDB.FileLayer.Pages
             else
             {
                 _highestPageNumber = (long)BitConverter.ToUInt64(_freePageHead.Data, 0);
-                startUpLog.Write("This page store contains " + _highestPageNumber + " pages");
+                startUpLog.WriteLine("This page store contains " + _highestPageNumber + " pages");
             }
         }
 
         public void Dispose()
         {
-            _startUpLog.Write("Disposing of " + this);
+            _startUpLog.WriteLine("Disposing of " + this);
 
             if (_pageCache != null)
                 _pageCache.Dispose();
@@ -165,5 +164,56 @@ namespace RestDB.FileLayer.Pages
 
             return pageNumber;
         }
+
+        #region Page Cache MixIn
+
+        IPageCache IPageCache.BeginTransaction(ITransaction transaction)
+        {
+            return _pageCache.BeginTransaction(transaction);
+        }
+
+        Task IPageCache.CommitTransaction(ITransaction transaction)
+        {
+            return _pageCache.CommitTransaction(transaction);
+        }
+
+        Task IPageCache.FinalizeTransaction(ITransaction transaction)
+        {
+            return _pageCache.FinalizeTransaction(transaction);
+        }
+
+        void IPageCache.RollbackTransaction(ITransaction transaction)
+        {
+            _pageCache.RollbackTransaction(transaction);
+        }
+
+        void IPageCache.Lock(ITransaction transaction, ulong pageNumber)
+        {
+            _pageCache.Lock(transaction, pageNumber);
+        }
+
+        void IPageCache.Unlock(ITransaction transaction, ulong pageNumber)
+        {
+            _pageCache.Unlock(transaction, pageNumber);
+        }
+
+        IPage IPageCache.Get(ITransaction transaction, ulong pageNumber, CacheHints hints)
+        {
+            return _pageCache.Get(transaction, pageNumber, hints);
+        }
+
+        IPageCache IPageCache.Update(ITransaction transaction, IEnumerable<PageUpdate> updates)
+        {
+            return _pageCache.Update(transaction, updates);
+        }
+
+        IPage IPageCache.NewPage(ulong pageNumber)
+        {
+            return _pageCache.NewPage(pageNumber);
+        }
+
+        uint IPageCache.PageSize => _pageCache.PageSize;
+
+        #endregion
     }
 }

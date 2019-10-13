@@ -128,7 +128,8 @@ namespace RestDB.Interfaces.DatabaseLayer
         /// made since that time in this transaction so that they can be
         /// applied all at once.
         /// </summary>
-        ITransaction BeginTransaction();
+        /// <param name="parentTransaction">Optional parent transaction</param>
+        ITransaction BeginTransaction(ITransaction parentTransaction);
 
         /// <summary>
         /// Commits the changes made within the transaction and makes these
@@ -142,6 +143,9 @@ namespace RestDB.Interfaces.DatabaseLayer
         /// until the commit completes and the version number is updated. The
         /// writing to the log file is async, so this part does not block.
         /// </summary>
+        /// <remarks>If this is a child transaction then the changes made within
+        /// the transaction are only committed to the parents view of the database
+        /// and are not written to disk until the parent transaction is committed</remarks>
         void CommitTransaction(ITransaction transaction);
 
         /// <summary>

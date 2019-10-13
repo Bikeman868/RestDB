@@ -13,6 +13,12 @@ namespace RestDB.Interfaces.DatabaseLayer
         ulong TransactionId { get; }
 
         /// <summary>
+        /// If this transaction was started within the context of another transaction
+        /// then this contains the outer transaction
+        /// </summary>
+        ulong? ParentTransactionId { get; }
+
+        /// <summary>
         /// The database version that as current when this transaction started
         /// </summary>
         ulong BeginVersionNumber { get; }

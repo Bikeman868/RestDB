@@ -6,11 +6,11 @@ using System.Diagnostics;
 
 namespace RestDB.UnitTests.Mocks
 {
-    public class MockStartupLog : MockImplementationProvider<IStartUpLog>
+    public class MockStartupLog : MockImplementationProvider<IStartupLog>
     {
-        protected override void SetupMock(IMockProducer mockProducer, Mock<IStartUpLog> mock)
+        protected override void SetupMock(IMockProducer mockProducer, Mock<IStartupLog> mock)
         {
-            mock.Setup(o => o.Write(It.IsAny<string>(), It.IsAny<bool>()))
+            mock.Setup(o => o.WriteLine(It.IsAny<string>(), It.IsAny<bool>()))
                 .Returns<string, bool>((message, isError) => 
                 {
                     Console.WriteLine((isError ? "STARTUP ERROR: " : "STARTUP: ") + message);
