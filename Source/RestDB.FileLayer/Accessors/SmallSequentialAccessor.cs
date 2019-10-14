@@ -33,8 +33,8 @@ namespace RestDB.FileLayer.Accessors
             var pageSize = _pageStore.PageSize;
 
             if (record.Length > pageSize)
-                throw new FileLayerException("Invalid attempt to write " + record.Length + " bytes into a page store with " + pageSize + " byte pages");
-
+                throw new FileLayerException("Invalid attempt to write " + record.Length + 
+                    " bytes into a page store with " + pageSize + " byte pages");
 
             var updates = new List<PageUpdate>();
             var sequence = 0U;

@@ -110,7 +110,6 @@ namespace RestDB.UnitTests.Mocks.DatabaseLayer
 
             public void RollbackTransaction(ITransaction transaction)
             {
-                throw new NotImplementedException();
             }
 
             private class Transaction : ITransaction

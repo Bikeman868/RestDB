@@ -12,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading;
 
 namespace RestDB.UnitTests.FileLayer
 {
@@ -81,7 +82,7 @@ namespace RestDB.UnitTests.FileLayer
 
             var strings = new[]
             {
-                "The short brown lazy dog couldn't jump pver anything",
+                "The short brown lazy dog couldn't jump over anything",
                 "One, two, buckle my shoe",
                 "YARD (Yet Another Relational Database)",
                 "This is a test, one, two, three, testing",
@@ -124,8 +125,8 @@ namespace RestDB.UnitTests.FileLayer
 
             Assert.IsNull(record);
 
-            _database.CommitTransaction(transaction);
-            _pageCache.CommitTransaction(transaction);
+            _database.RollbackTransaction(transaction);
+            _pageCache.RollbackTransaction(transaction);
         }
 
         [Test]
@@ -138,27 +139,30 @@ namespace RestDB.UnitTests.FileLayer
         {
             const ushort objectType = 128;
 
-            var transaction1 = _database.BeginTransaction(null);
-            _pageCache.BeginTransaction(transaction1);
+            var threads = new List<Thread>();
 
-            var transaction2 = _database.BeginTransaction(null);
-            _pageCache.BeginTransaction(transaction2);
+            for (var i = 1; i < 4; i++)
+            {
+                var transactionNumber = i;
+                var thread = new Thread(() =>
+                {
+                    var writeTransaction = _database.BeginTransaction(null);
+                    _pageCache.BeginTransaction(writeTransaction);
 
-            var transaction3 = _database.BeginTransaction(null);
-            _pageCache.BeginTransaction(transaction3);
+                    Thread.Sleep(transactionNumber);
 
-            _accessor.Append(objectType, transaction1, Encoding.UTF8.GetBytes("Transaction 1"));
-            _accessor.Append(objectType, transaction2, Encoding.UTF8.GetBytes("Transaction 2"));
-            _accessor.Append(objectType, transaction3, Encoding.UTF8.GetBytes("Transaction 3"));
+                    _accessor.Append(objectType, writeTransaction, Encoding.UTF8.GetBytes("Transaction " + transactionNumber));
 
-            _database.CommitTransaction(transaction1);
-            _pageCache.CommitTransaction(transaction1);
+                    Thread.Sleep(5);
 
-            _database.CommitTransaction(transaction2);
-            _pageCache.CommitTransaction(transaction2);
+                    _database.CommitTransaction(writeTransaction);
+                    _pageCache.CommitTransaction(writeTransaction);
+                });
+                threads.Add(thread);
+            }
 
-            _database.CommitTransaction(transaction3);
-            _pageCache.CommitTransaction(transaction3);
+            foreach (var thread in threads) thread.Start();
+            foreach (var thread in threads) thread.Join();
 
             var transaction = _database.BeginTransaction(null);
             _pageCache.BeginTransaction(transaction);

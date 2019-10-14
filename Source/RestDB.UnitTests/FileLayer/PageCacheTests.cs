@@ -167,6 +167,42 @@ namespace RestDB.UnitTests.FileLayer
         }
 
         [Test]
+        public void should_not_isolate_with_no_transaction()
+        {
+            _pageCache.Update(
+                null, new[]
+                {
+                    new PageUpdate
+                    {
+                        SequenceNumber = 1,
+                        PageNumber = 1,
+                        Offset = 10,
+                        Data = new byte[]{ 1, 2, 3 }
+                    }
+                });
+
+            using (var page = _pageCache.Get(null, 1, CacheHints.None))
+            {
+                Assert.AreEqual(1, page.Data[10]);
+                Assert.AreEqual(2, page.Data[11]);
+                Assert.AreEqual(3, page.Data[12]);
+            }
+
+            var transaction = _database.BeginTransaction(null);
+            _pageCache.BeginTransaction(transaction);
+
+            using (var page = _pageCache.Get(transaction, 1, CacheHints.None))
+            {
+                Assert.AreEqual(1, page.Data[10]);
+                Assert.AreEqual(2, page.Data[11]);
+                Assert.AreEqual(3, page.Data[12]);
+            }
+
+            _database.RollbackTransaction(transaction);
+            _pageCache.RollbackTransaction(transaction);
+        }
+
+        [Test]
         public void should_snapshot_at_start_of_transaction()
         {
             const ulong pageNumber = 5;
@@ -247,7 +283,7 @@ namespace RestDB.UnitTests.FileLayer
                 Assert.AreEqual(100, page.Data[5]);
             }
 
-            // Verrify that the open transaction can not see the updates
+            // Verify that the open transaction can not see the updates
 
             using (var page = _pageCache.Get(transaction2, pageNumber + 1, CacheHints.None))
             {
@@ -291,7 +327,47 @@ namespace RestDB.UnitTests.FileLayer
         [Test]
         public void should_get_latest_with_no_transaction()
         {
+            const ulong pageNumber = 1UL;
 
+            var transaction = _database.BeginTransaction(null);
+            _pageCache.BeginTransaction(transaction);
+
+            _pageCache.Update(
+                transaction, new[]
+                {
+                    new PageUpdate
+                    {
+                        SequenceNumber = 1,
+                        PageNumber = pageNumber,
+                        Offset = 10,
+                        Data = new byte[]{ 1, 2, 3 }
+                    }
+                });
+
+            using (var page = _pageCache.Get(transaction, pageNumber, CacheHints.None))
+            {
+                Assert.AreEqual(1, page.Data[10]);
+                Assert.AreEqual(2, page.Data[11]);
+                Assert.AreEqual(3, page.Data[12]);
+            }
+
+            using (var page = _pageCache.Get(null, pageNumber, CacheHints.None))
+            {
+                Assert.AreEqual(0, page.Data[10]);
+                Assert.AreEqual(0, page.Data[11]);
+                Assert.AreEqual(0, page.Data[12]);
+            }
+
+            _database.CommitTransaction(transaction);
+            _pageCache.CommitTransaction(transaction);
+            _pageCache.FinalizeTransaction(transaction);
+
+            using (var page = _pageCache.Get(null, pageNumber, CacheHints.None))
+            {
+                Assert.AreEqual(1, page.Data[10]);
+                Assert.AreEqual(2, page.Data[11]);
+                Assert.AreEqual(3, page.Data[12]);
+            }
         }
 
         [Test]
@@ -299,7 +375,7 @@ namespace RestDB.UnitTests.FileLayer
         {
             const ulong pageNumber = 1;
             const uint pageOffset = 10;
-            const int threadCount = 2;
+            const int threadCount = 5;
 
             ThreadStart threadAction = () =>
             {

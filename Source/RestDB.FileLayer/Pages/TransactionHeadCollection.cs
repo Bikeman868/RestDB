@@ -90,7 +90,27 @@ namespace RestDB.FileLayer.Pages
                 if (!_transactions.TryGetValue(transaction.TransactionId, out transactionHead))
                     throw new FileLayerException("You must begin the transaction before you can lock pages with it");
 
-            transactionHead.Lock(pageHead);
+            // Always lock pages to the root transaction level
+            var rootTransactionHead = transactionHead.Root;
+
+            rootTransactionHead.Lock(pageHead);
+
+            using (var newRootPage = _pagePool.Get(pageHead.PageNumber))
+            {
+                using (var latestVersion = pageHead.GetVersion(null))
+                    latestVersion.Data.CopyTo(newRootPage.Data, 0);
+
+                rootTransactionHead.SetModifiedPage(newRootPage);
+
+                if (!ReferenceEquals(transactionHead, rootTransactionHead))
+                {
+                    using (var childPage = _pagePool.Get(pageHead.PageNumber))
+                    {
+                        newRootPage.Data.CopyTo(childPage.Data, 0);
+                        transactionHead.SetModifiedPage(childPage);
+                    }
+                }
+            }
 
             return transactionHead;
         }

@@ -88,10 +88,14 @@ namespace RestDB.FileLayer.Pages
             }
 
             lock (_modifiedPages)
-                _modifiedPages.Add(page.PageNumber, page.Reference());
+            {
+                if (_modifiedPages.TryGetValue(page.PageNumber, out IPage existing))
+                    existing.Dispose();
+                _modifiedPages[page.PageNumber] = page.Reference();
+            }
         }
 
-        public void Lock(PageHead page)
+        public void Lock(PageHead pageHead)
         {
             if (LockedPages == null)
             {
@@ -106,11 +110,11 @@ namespace RestDB.FileLayer.Pages
 
             lock (LockedPages)
             {
-                needsLock = !LockedPages.Contains(page);
-                if (needsLock) LockedPages.Add(page);
+                needsLock = !LockedPages.Contains(pageHead);
+                if (needsLock) LockedPages.Add(pageHead);
             }
 
-            if (needsLock) page.Lock(this);
+            if (needsLock) pageHead.Lock(this);
         }
     }
 }
