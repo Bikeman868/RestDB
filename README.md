@@ -11,11 +11,12 @@ A more intuitive database with a non-proprietary http/restful interface
 - Uses https for login and authentication.
 - Http Accept header defines output format including html, json, yaml, xml and binary formats.
 - Customizable templates for html output. Template name supplied in the query string.
-- Supports row ordered and column ordered tables, indexes and views.
-- Supports transations, locks and isolation levels with full ACID.
+- Supports row oriented, column oriented or graph tables.
+- Supports indexes and views.
+- Supports transations, locks, page versioning and transaction isolation levels with full ACID.
 - Supports stored procedures, functions and custom data types.
 - Query plan optimization. Cache and reuse query plans.Statistical analysis of data for query plan optimization.
-- Multiple language support (T-SQL, MySQL and Native).
+- Multiple language support (T-SQL, MySQL, GQL, Cypher and Native).
 - Granular permissions, identity groups and roles.
 - Backup, restore, trasaction logs and replication.
 - Use one file set or many sets and split each file set into as many files as you like to balance simplicity against performance.
@@ -53,7 +54,7 @@ LIMIT 10;
 ```
 
 ```
-LANGUAGE NSQL;
+LANGUAGE NATIVE;
 
 RowNumber = 1;
 FOR c IN Customers ORDER BY c.OrderTotal DESC
@@ -62,6 +63,17 @@ FOR c IN Customers ORDER BY c.OrderTotal DESC
 	IF (++RowNumber > 10) BREAK;
 }
 ```
+
+```
+LANGUAGE GQL;
+
+MATCH 
+	(p:Person {name: "Jennifer"})
+		-[rel:LIKES]->
+	(g:Technology {type: "Graphs"})
+RETURN p
+```
+
 ## Limitations
 
 For most applications these limitations can be ignored. The RDMS is not 
