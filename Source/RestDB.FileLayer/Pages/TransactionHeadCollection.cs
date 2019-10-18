@@ -90,27 +90,7 @@ namespace RestDB.FileLayer.Pages
                 if (!_transactions.TryGetValue(transaction.TransactionId, out transactionHead))
                     throw new FileLayerException("You must begin the transaction before you can lock pages with it");
 
-            // Always lock pages to the root transaction level
-            var rootTransactionHead = transactionHead.Root;
-
-            rootTransactionHead.Lock(pageHead);
-
-            using (var newRootPage = _pagePool.Get(pageHead.PageNumber))
-            {
-                using (var latestVersion = pageHead.GetVersion(null))
-                    latestVersion.Data.CopyTo(newRootPage.Data, 0);
-
-                rootTransactionHead.SetModifiedPage(newRootPage);
-
-                if (!ReferenceEquals(transactionHead, rootTransactionHead))
-                {
-                    using (var childPage = _pagePool.Get(pageHead.PageNumber))
-                    {
-                        newRootPage.Data.CopyTo(childPage.Data, 0);
-                        transactionHead.SetModifiedPage(childPage);
-                    }
-                }
-            }
+            transactionHead.Lock(pageHead);
 
             return transactionHead;
         }
@@ -140,7 +120,7 @@ namespace RestDB.FileLayer.Pages
                 }
             }
 
-            var transactionHead = new TransactionHead(transaction, parentHead);
+            var transactionHead = new TransactionHead(transaction, parentHead, _pagePool);
             lock (_transactions) _transactions.Add(transaction.TransactionId, transactionHead);
             return transactionHead;
         }
@@ -176,34 +156,15 @@ namespace RestDB.FileLayer.Pages
             return pageHead.GetVersion(transactionHead.Root.Transaction.BeginVersionNumber);
         }
 
-        public void Update(ITransaction transaction, IEnumerable<PageUpdate> updates, IPageCache pageCache)
+        public void Update(ITransaction transaction, IEnumerable<PageUpdate> updates, PageHeadCollection pages)
         {
             TransactionHead transactionHead;
             lock (_transactions)
                 if (!_transactions.TryGetValue(transaction.TransactionId, out transactionHead))
                     throw new FileLayerException("You can not apply updates to a transaction context before the transaction has begun or after it has ended");
 
-            var updateList = updates.OrderBy(u => u.SequenceNumber).ToList();
-            transactionHead.AddUpdates(updateList);
+            transactionHead.AddUpdates(updates, pages);
 
-            foreach (var update in updateList)
-            {
-                IPage modifiedPage;
-                lock (transactionHead)
-                {
-                    modifiedPage = transactionHead.GetModifiedPage(update.PageNumber);
-                    if (modifiedPage == null)
-                    {
-                        modifiedPage = _pagePool.Get(update.PageNumber);
-
-                        using (var originalPage = pageCache.Get(transaction, update.PageNumber, CacheHints.ForUpdate))
-                            originalPage.Data.CopyTo(modifiedPage.Data, 0);
-
-                        transactionHead.SetModifiedPage(modifiedPage);
-                    }
-                }
-                update.Data.CopyTo(modifiedPage.Data, update.Offset);
-            }
         }
     }
 }

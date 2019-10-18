@@ -65,13 +65,12 @@ FOR c IN Customers ORDER BY c.OrderTotal DESC
 ```
 
 ```
-LANGUAGE GQL;
+LANGUAGE CYPHER;
 
-MATCH 
-	(p:Person {name: "Jennifer"})
-		-[rel:LIKES]->
-	(g:Technology {type: "Graphs"})
-RETURN p
+MATCH (c:Customer)
+RETURN c.CustomerId, c.OrderTotal
+ORDER BY c.OrderTotal DESC
+LIMIT 10;
 ```
 
 ## Limitations
@@ -92,14 +91,16 @@ from technical tradeoffs in the architectural design of the RDMS.
 - Maximum data file size = 2^63 bytes (1024 PB)
 - Maximum log file size = 2^63 bytes (1024 PB)
 
-### Row order table limitations
+### Row oriented table limitations
 - Maximum row size = page size
 - Maximum number of rows per table = 2^64
 - Maximum number of columns per row = 2^16
 - Maximum size of index entry = 2^16 bytes (64KB)
 
 
-### Column order table limitations
+### Column oriented table limitations
+
+### Graph oriented table limitations
 
 ## Performance tuning advice
 
@@ -175,3 +176,36 @@ It doesn't make sense to have more log files or more data files than you have CP
 For optimal performance split each file set into a number of files eaqual to the
 number of CPUs in the machine and store these files on different physical disk
 volumes.
+
+### Table orientations
+When you create tables in a database you can choose row oriented, column oriented
+or graph oriented. You can only make this choice when the table is created, this can
+not be changed later, and the choice you make has a big impact on performance.
+
+Row oriented tables have a fixed column schema, thst is to say that columns can
+be added and removed, but every row in the table has the exact same columns so modifying
+the column schema requires every row in the table to be rewritten. With this table
+orientation rows are stored consecutively in the data file with a whole number of
+rows per page of data. Rows can not span page boundaries. This is the best choice if
+will typically be locating data based on multiple column values then returning most
+of the columns in every matching row.
+
+Column oriented tables organize data storage in column order making it much more
+efficient to return one column of data but much less efficient to return all of
+the columns for a single row. This is because the column values for a single row
+are in different pages and far apart on the physical storage medium. This is the 
+best choice if you want to locate all records that match a specific pattern in a
+given column and return the contents of that column.
+
+Graph oriented tables are different from the other types because they store relationships
+as data that can be searched and returned just like records. For example in a row
+oriented table to find all the employees of a company we would create an index on
+the CompanyID field of the Employee table then search this index for employees
+with a specific CompanyID but in a graph oriented table the list of company to employee
+relationships is stored separately from the employee data and can be queried
+much more efficiently. The advangates of graph tables are more pronounced when you
+start adding properties to relationships and use these properties to locate relationships.
+For example in the Employee to Company relationship I can store the employee's start
+date then easily find all employees who have been employed less than a year without
+touching the employee table at all.
+

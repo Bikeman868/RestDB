@@ -1,4 +1,5 @@
-﻿using RestDB.Interfaces.DatabaseLayer;
+﻿using RestDB.Interfaces;
+using RestDB.Interfaces.DatabaseLayer;
 using RestDB.Interfaces.FileLayer;
 using System;
 using System.Collections.Generic;
@@ -7,7 +8,8 @@ using System.Linq;
 namespace RestDB.FileLayer.Pages
 {
     /// <summary>
-    /// Contains information that is private to the transaction context
+    /// Contains information that is private to a transaction. Implements
+    /// nested transactions and updates to data within a transaction
     /// </summary>
     internal class TransactionHead: IDisposable
     {
@@ -16,10 +18,12 @@ namespace RestDB.FileLayer.Pages
         public List<PageHead> LockedPages { get; private set; }
         public TransactionHead Parent { get; private set; }
 
+        private readonly IPagePool _pagePool;
         private IDictionary<ulong, IPage> _modifiedPages;
 
-        public TransactionHead(ITransaction transaction, TransactionHead parent)
+        public TransactionHead(ITransaction transaction, TransactionHead parent, IPagePool pagePool)
         {
+            _pagePool = pagePool;
             Transaction = transaction;
             Parent = parent;
         }
@@ -47,19 +51,48 @@ namespace RestDB.FileLayer.Pages
 
         public TransactionHead Root => Parent == null ? this : Parent.Root;
 
-        public void AddUpdates(IEnumerable<PageUpdate> updates)
+        public void AddUpdates(IEnumerable<PageUpdate> updates, PageHeadCollection pages)
         {
-            if (Updates == null)
+            EnsureUpdates();
+
+            var start = Updates.Count;
+            int end;
+            lock (Updates)
             {
-                lock(Transaction)
-                {
-                    if (Updates == null)
-                        Updates = new List<PageUpdate>();
-                }
+                Updates.AddRange(updates.OrderBy(u => u.SequenceNumber).Select(u => { u.SequenceNumber += (uint)start; return u; }));
+                end = Updates.Count;
             }
 
-            var start = (uint)Updates.Count;
-            lock (Updates) Updates.AddRange(updates.Select(u => { u.SequenceNumber += start; return u; }));
+            for (var i = start; i < end; i++)
+            {
+                PageUpdate update;
+                lock (Updates) update = Updates[i];
+
+                IPage modifiedPage = null;
+                try
+                {
+                    lock (Transaction)
+                    {
+                        modifiedPage = GetModifiedPage(update.PageNumber);
+                        if (modifiedPage == null)
+                        {
+                            modifiedPage = _pagePool.Get(update.PageNumber);
+
+                            var pageHead = pages.GetPageHead(update.PageNumber, CacheHints.ForUpdate);
+
+                            using (var originalPage = pageHead.GetVersion(Root.Transaction.BeginVersionNumber))
+                                originalPage.Data.CopyTo(modifiedPage.Data, 0);
+
+                            SetModifiedPage(modifiedPage);
+                        }
+                        update.Data.CopyTo(modifiedPage.Data, update.Offset);
+                    }
+                }
+                finally
+                {
+                    modifiedPage.Dispose();
+                }
+            }
         }
 
         public IPage GetModifiedPage(ulong pageNumber)
@@ -73,19 +106,12 @@ namespace RestDB.FileLayer.Pages
                 }
             }
 
-            return Parent == null ?  null : Parent.GetModifiedPage(pageNumber);
+            return Parent == null ? null : Parent.GetModifiedPage(pageNumber);
         }
 
         public void SetModifiedPage(IPage page)
         {
-            if (_modifiedPages == null)
-            {
-                lock (Transaction)
-                {
-                    if (_modifiedPages == null)
-                        _modifiedPages = new Dictionary<ulong, IPage>();
-                }
-            }
+            EnsureModifiedPages();
 
             lock (_modifiedPages)
             {
@@ -95,7 +121,95 @@ namespace RestDB.FileLayer.Pages
             }
         }
 
-        public void Lock(PageHead pageHead)
+        public bool Lock(PageHead pageHead)
+        {
+            if (Parent == null)
+            {
+                EnsureLockedPages();
+
+                lock (LockedPages)
+                {
+                    if (LockedPages.Contains(pageHead))
+                        return false;
+
+                    LockedPages.Add(pageHead);
+                }
+
+                pageHead.Lock(this);
+
+                using (var latestVersion = pageHead.GetVersion(null))
+                {
+                    using (var newPage = _pagePool.Get(pageHead.PageNumber))
+                    {
+                        latestVersion.Data.CopyTo(newPage.Data, 0);
+
+                        if (Updates != null)
+                        {
+                            lock (Updates)
+                            {
+                                foreach (var update in Updates)
+                                    if (update.PageNumber == pageHead.PageNumber)
+                                        update.Data.CopyTo(newPage.Data, update.Offset);
+                            }
+                        }
+                        SetModifiedPage(newPage);
+                    }
+                }
+
+                return true;
+            }
+
+            if (!Parent.Lock(pageHead))
+                return false;
+
+            using (var parentPage = Parent.GetModifiedPage(pageHead.PageNumber))
+            {
+                using (var newPage = _pagePool.Get(pageHead.PageNumber))
+                {
+                    parentPage.Data.CopyTo(newPage.Data, 0);
+
+                    if (Updates != null)
+                    {
+                        lock (Updates)
+                        {
+                            foreach (var update in Updates)
+                                if (update.PageNumber == pageHead.PageNumber)
+                                    update.Data.CopyTo(newPage.Data, update.Offset);
+                        }
+                    }
+
+                    SetModifiedPage(newPage);
+                }
+            }
+
+            return true;
+        }
+
+        private void EnsureUpdates()
+        {
+            if (Updates == null)
+            {
+                lock (Transaction)
+                {
+                    if (Updates == null)
+                        Updates = new List<PageUpdate>();
+                }
+            }
+        }
+
+        private void EnsureModifiedPages()
+        {
+            if (_modifiedPages == null)
+            {
+                lock (Transaction)
+                {
+                    if (_modifiedPages == null)
+                        _modifiedPages = new Dictionary<ulong, IPage>();
+                }
+            }
+        }
+
+        private void EnsureLockedPages()
         {
             if (LockedPages == null)
             {
@@ -105,16 +219,6 @@ namespace RestDB.FileLayer.Pages
                         LockedPages = new List<PageHead>();
                 }
             }
-
-            bool needsLock;
-
-            lock (LockedPages)
-            {
-                needsLock = !LockedPages.Contains(pageHead);
-                if (needsLock) LockedPages.Add(pageHead);
-            }
-
-            if (needsLock) pageHead.Lock(this);
         }
     }
 }

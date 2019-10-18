@@ -172,7 +172,7 @@ namespace RestDB.FileLayer.Pages
             if (transaction == null)
                 _fileSet.Write(transaction, updates);
             else
-                _transactions.Update(transaction, updates, this);
+                _transactions.Update(transaction, updates, _pages);
 
             return this;
         }

@@ -73,6 +73,8 @@ namespace RestDB.UnitTests.FileLayer
 
             if (_pageStore != null)
                 _pageStore.Dispose();
+
+            Reset();
         }
 
         [Test]
@@ -140,23 +142,31 @@ namespace RestDB.UnitTests.FileLayer
             const ushort objectType = 128;
 
             var threads = new List<Thread>();
+            var exceptions = new List<Exception>();
 
             for (var i = 1; i < 4; i++)
             {
                 var transactionNumber = i;
                 var thread = new Thread(() =>
                 {
-                    var writeTransaction = _database.BeginTransaction(null);
-                    _pageCache.BeginTransaction(writeTransaction);
+                    try
+                    {
+                        var writeTransaction = _database.BeginTransaction(null);
+                        _pageCache.BeginTransaction(writeTransaction);
 
-                    Thread.Sleep(transactionNumber);
+                        Thread.Sleep(transactionNumber);
 
-                    _accessor.Append(objectType, writeTransaction, Encoding.UTF8.GetBytes("Transaction " + transactionNumber));
+                        _accessor.Append(objectType, writeTransaction, Encoding.UTF8.GetBytes("Transaction " + transactionNumber));
 
-                    Thread.Sleep(5);
+                        Thread.Sleep(5);
 
-                    _database.CommitTransaction(writeTransaction);
-                    _pageCache.CommitTransaction(writeTransaction);
+                        _database.CommitTransaction(writeTransaction);
+                        _pageCache.CommitTransaction(writeTransaction);
+                    }
+                    catch(Exception ex)
+                    {
+                        exceptions.Add(ex);
+                    }
                 });
                 threads.Add(thread);
             }
@@ -164,15 +174,19 @@ namespace RestDB.UnitTests.FileLayer
             foreach (var thread in threads) thread.Start();
             foreach (var thread in threads) thread.Join();
 
+            Assert.AreEqual(0, exceptions.Count);
+
             var transaction = _database.BeginTransaction(null);
             _pageCache.BeginTransaction(transaction);
 
-            Action<PageLocation, string> check = (location, expected) =>
+            var results = new HashSet<string>();
+
+            Action<PageLocation> check = (location) =>
             {
                 using (var page = _pageCache.Get(transaction, location.PageNumber, CacheHints.None))
                 {
                     var actual = Encoding.UTF8.GetString(page.Data, (int)location.Offset, (int)location.Length);
-                    Assert.AreEqual(expected, actual);
+                    Assert.IsTrue(results.Add(actual));
                 }
             };
 
@@ -181,8 +195,13 @@ namespace RestDB.UnitTests.FileLayer
 
             for(var i = 1; i < 4; i++)
             {
-                check(record, "Transaction " + i);
+                check(record);
                 record = _accessor.LocateNext(objectType, transaction, indexLocation);
+            }
+
+            for (var i = 1; i < 4; i++)
+            {
+                Assert.IsTrue(results.Contains("Transaction " + i));
             }
 
             Assert.IsNull(record);

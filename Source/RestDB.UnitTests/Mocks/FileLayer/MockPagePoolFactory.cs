@@ -1,6 +1,8 @@
 ﻿using Moq;
 using Moq.Modules;
+using NUnit.Framework;
 using RestDB.Interfaces.FileLayer;
+using System.Collections.Generic;
 
 namespace RestDB.UnitTests.Mocks.FileLayer
 {
@@ -14,6 +16,8 @@ namespace RestDB.UnitTests.Mocks.FileLayer
 
         private class PagePool : IPagePool
         {
+            List<Page> _pages = new List<Page>();
+
             public PagePool(uint pageSize)
             {
                 PageSize = pageSize;
@@ -31,7 +35,15 @@ namespace RestDB.UnitTests.Mocks.FileLayer
 
                 if (clear) page.Data.Initialize();
 
+                _pages.Add(page);
+
                 return page;
+            }
+
+            public void Verify()
+            {
+                foreach (var page in _pages)
+                    Assert.AreEqual(0, page.ReferenceCount);
             }
 
             private class Page : IPage
@@ -40,12 +52,16 @@ namespace RestDB.UnitTests.Mocks.FileLayer
 
                 public byte[] Data { get; set; }
 
+                public int ReferenceCount = 1;
+
                 public void Dispose()
                 {
+                    ReferenceCount--;
                 }
 
                 public IPage Reference()
                 {
+                    ReferenceCount++;
                     return this;
                 }
             }
