@@ -185,6 +185,10 @@ namespace RestDB.FileLayer.Pages
             return true;
         }
 
+        public void Unlock(PageHead pageHead)
+        {
+        }
+
         private void EnsureUpdates()
         {
             if (Updates == null)

@@ -151,7 +151,7 @@ namespace RestDB.FileLayer.Pages
 
         void IPageCache.RollbackTransaction(ITransaction transaction)
         {
-            CleanupTransaction(transaction);
+            CleanupTransaction(transaction).Dispose();
         }
 
         Task IPageCache.FinalizeTransaction(ITransaction transaction)

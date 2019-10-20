@@ -79,11 +79,12 @@ namespace RestDB.UnitTests.FileLayer
         public void should_allow_multiple_transactions_to_append_records()
         {
             const ushort objectType = 128;
+            const int threadCount = 1;
 
             var threads = new List<Thread>();
             var exceptions = new List<Exception>();
 
-            for (var i = 1; i < 4; i++)
+            for (var i = 1; i <= threadCount; i++)
             {
                 var transactionNumber = i;
                 var thread = new Thread(() =>
@@ -100,12 +101,16 @@ namespace RestDB.UnitTests.FileLayer
                         _database.CommitTransaction(writeTransaction);
                         _pageStore.CommitTransaction(writeTransaction);
                     }
-                    catch(Exception ex)
+                    catch (Exception ex)
                     {
-                        lock(exceptions)
+                        lock (exceptions)
                             exceptions.Add(ex);
                     }
-                });
+                })
+                {
+                    Name = "Transaction " + i,
+                    IsBackground = true
+                };
                 threads.Add(thread);
             }
 
@@ -131,13 +136,13 @@ namespace RestDB.UnitTests.FileLayer
             var record = _accessor.LocateFirst(objectType, transaction, out object indexLocation);
             Assert.IsNotNull(record);
 
-            for(var i = 1; i < 4; i++)
+            for(var i = 1; i <= threadCount; i++)
             {
                 check(record);
                 record = _accessor.LocateNext(objectType, transaction, indexLocation);
             }
 
-            for (var i = 1; i < 4; i++)
+            for (var i = 1; i <= threadCount; i++)
             {
                 Assert.IsTrue(results.Contains("Transaction " + i));
             }

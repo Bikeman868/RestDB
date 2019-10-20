@@ -94,7 +94,7 @@ namespace RestDB.Interfaces.FileLayer
         /// <returns>A page from the cache or null if there is no such page.
         /// The page must have Dispose() called when doe accessing it</returns>
         /// <param name="pageNumber">The page number to return</param>
-        /// <param name="hints">Hints that affevt caching strategy</param>
+        /// <param name="hints">Hints that affect caching strategy</param>
         IPage Get(ITransaction transaction, ulong pageNumber, CacheHints hints);
 
         /// <summary>

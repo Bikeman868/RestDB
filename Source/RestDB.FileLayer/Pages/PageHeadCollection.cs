@@ -84,6 +84,11 @@ namespace RestDB.FileLayer.Pages
             return "page head collection from " + _fileSet;
         }
 
+        /// <summary>
+        /// Returns the page head for a page number. The page head is the had
+        /// of a linked list of versions of that page
+        /// </summary>
+        /// <returns>Null if the page does not exist in storage</returns>
         public PageHead GetPageHead(ulong pageNumber, CacheHints hints)
         {
             PageHead pageHead;
@@ -92,7 +97,10 @@ namespace RestDB.FileLayer.Pages
             {
                 if (!_pages.TryGetValue(pageNumber, out pageHead))
                 {
-                    pageHead = new PageHead(pageNumber, GetFromFileSet);
+                    var page = GetFromFileSet(pageNumber);
+                    if (page == null) return null;
+
+                    pageHead = new PageHead(pageNumber, page);
                     _pages.Add(pageNumber, pageHead);
                 }
             }
@@ -100,20 +108,25 @@ namespace RestDB.FileLayer.Pages
             return pageHead;
         }
 
+        /// <summary>
+        /// Creates a new page in storage. A page with this number must not already exist
+        /// </summary>
         public IPage NewPage(ulong pageNumber)
         {
             using (var page = _pagePool.Get(pageNumber, true))
             {
-                lock (_pages) _pages.Add(pageNumber, new PageHead(pageNumber, GetFromFileSet));
+                lock (_pages) _pages.Add(pageNumber, new PageHead(pageNumber, page));
                 return page.Reference();
             }
         }
 
         private IPage GetFromFileSet(ulong pageNumber)
         {
-            var page = _pagePool.Get(pageNumber);
-            if (!_fileSet.Read(page)) page.Data.Initialize();
-            return page;
+            using (var page = _pagePool.Get(pageNumber))
+            {
+                if (_fileSet.Read(page)) return page.Reference();
+            }
+            return null;
         }
 
     }

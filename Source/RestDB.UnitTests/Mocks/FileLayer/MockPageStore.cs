@@ -57,10 +57,8 @@ namespace RestDB.UnitTests.Mocks.FileLayer
         public IPage Get(ITransaction transaction, ulong pageNumber, CacheHints hints)
         {
             if (!_pages.TryGetValue(pageNumber, out IPage page))
-            {
-                page = _pagePool.Get(pageNumber, true);
-                _pages.Add(pageNumber, page);
-            }
+                return null;
+
             return page.Reference();
         }
 

@@ -15,21 +15,21 @@ namespace RestDB.FileLayer.Pages
         public OwinContainers.LinkedList<PageVersion> Versions { get; private set; }
 
         private TransactionHead _lockingTransaction;
-        private  uint _lockCount;
+        private uint _lockCount;
         private ManualResetEventSlim _unlockEvent;
-        private Func<ulong, IPage> _pageGetter;
 
         /// <summary>
         /// Constructs a new page head. The page head handles page locks and versions
         /// </summary>
         /// <param name="pageNumber">The page number of the page</param>
-        /// <param name="pageGetter">A function that will retrieve the
-        /// current version of the page from storage</param>
-        public PageHead(ulong pageNumber, Func<ulong, IPage> pageGetter)
+        /// <param name="page">The current version of the page from storage</param>
+        public PageHead(ulong pageNumber, IPage page)
         {
             PageNumber = pageNumber;
             Versions = new OwinContainers.LinkedList<PageVersion>();
-            _pageGetter = pageGetter;
+
+            var pageVersion = new PageVersion(0, page);
+            pageVersion.Added(this, Versions.Append(pageVersion));
         }
 
         public void Dispose()
@@ -91,25 +91,8 @@ namespace RestDB.FileLayer.Pages
             }
         }
 
-        private void EnsureOriginalVersion()
-        {
-            if (Versions.IsEmpty)
-            {
-                var page = _pageGetter(PageNumber);
-                var pageVersion = new PageVersion(0, page);
-
-                lock (Versions)
-                {
-                    if (Versions.IsEmpty)
-                        pageVersion.Added(this, Versions.Append(pageVersion));
-                }
-            }
-        }
-
         public IPage GetVersion(ulong? versionNumber)
         {
-            EnsureOriginalVersion();
-
             var pageVersionElement = versionNumber.HasValue
                 ? Versions.FirstElementOrDefault(pv => pv.VersionNumber <= versionNumber.Value)
                 : Versions.FirstElementOrDefault();
@@ -127,8 +110,6 @@ namespace RestDB.FileLayer.Pages
         /// </summary>
         public PageVersion AddVersion(PageVersion pageVersion)
         {
-            EnsureOriginalVersion();
-
             lock (Versions)
             {
                 var nextVersion = Versions.FirstElementOrDefault(v => v.VersionNumber >= pageVersion.VersionNumber);

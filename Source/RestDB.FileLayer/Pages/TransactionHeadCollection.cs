@@ -102,7 +102,7 @@ namespace RestDB.FileLayer.Pages
                 if (!_transactions.TryGetValue(transaction.TransactionId, out transactionHead))
                     throw new FileLayerException("You must begin the transaction before you can lock pages with it");
 
-            // transactionHead.Unlock(pageHead);
+            transactionHead.Unlock(pageHead);
 
             return transactionHead;
         }
@@ -140,8 +140,13 @@ namespace RestDB.FileLayer.Pages
 
         public IPage GetPage(ITransaction transaction, ulong pageNumber, CacheHints hints, PageHeadCollection pages)
         {
+            PageHead pageHead;
+
             if (transaction == null)
-                return pages.GetPageHead(pageNumber, hints).GetVersion(null);
+            {
+                pageHead = pages.GetPageHead(pageNumber, hints);
+                return pageHead == null ? null : pageHead.GetVersion(null);
+            }
 
             TransactionHead transactionHead;
             lock (_transactions)
@@ -151,9 +156,8 @@ namespace RestDB.FileLayer.Pages
             var modifiedPage = transactionHead.GetModifiedPage(pageNumber);
             if (modifiedPage != null) return modifiedPage;
 
-            var pageHead = pages.GetPageHead(pageNumber, hints);
-
-            return pageHead.GetVersion(transactionHead.Root.Transaction.BeginVersionNumber);
+            pageHead = pages.GetPageHead(pageNumber, hints);
+            return pageHead == null ? null : pageHead.GetVersion(transactionHead.Root.Transaction.BeginVersionNumber);
         }
 
         public void Update(ITransaction transaction, IEnumerable<PageUpdate> updates, PageHeadCollection pages)

@@ -107,14 +107,17 @@ from technical tradeoffs in the architectural design of the RDMS.
 ### Page Size
 The most important consideration is the choice of page size. The architecture
 of RestDB has an ACID page store at the bottom and tables, indexes, procedures
-etc are all layered on top.
+etc are all layered on top, so everything is stored in pages.
 
 All data files in a file set must have the same page size and the page size can
 ony be changed by rwriting the whole file set (ie full backup and restore). Data
-is read/written to the file set in Page Size chunks. This means that if you only 
-change a few bytes the whole page will be read, updated and written back. Having
-said that there is a very sophisticated mechanism to cache pages and group updates
-by page to minimize the amount of disk operations required.
+is read/written to the file set in Page Size chunks. All database objects in the 
+same file set must use the same page size.
+
+Because data is read, written and and cached in pages, if you only change a few 
+bytes the whole page will be read, updated and written back. Having said that there 
+is a very sophisticated mechanism to cache pages and group updates by page to 
+minimize the amount of disk operations required.
 
 Database objects like tables, indexes etc must be contained within a single file
 set (which can span multiple files). You can create as many file sets as you need,
@@ -130,22 +133,44 @@ this snapshot of the database state in memory for a long time adding a lot of
 memory pressure. Using smaller pag sizes will help this situation.
 
 On the whole smaller pages are better except for the following considerations:
+
 1. Many small pages creates a lot of management overhead increasing the memory
-   needed to manage the pages and also adds CPU cycles to traverse data structures
-   to find the version of a page that is appropriate to a given transaction.
+   needed to manage the pages and also adds CPU cycles to traverse data structures.
+   For example if you have a database of 1 billion records and you can only fit one 
+   row in each page then you will need 1 billion pages. To keep track of which 
+   rows are in which pages there is an index containing the row number range and 
+   the page where these rows are stored. In this scenario we would need 1 billion 
+   entries in the row/page mapping table because there is 1-1 relationship between 
+   rows and pages in this case. This row/page index would take up many pages which
+   also have to be managed. In general you should make the pages large enough to 
+   hold at least 16 rows. For most databases you should aim for 1000-8000 rows/page.
 2. In row ordered tables a row must be contained within a single page. The page
    size defines the maximum row size but there is also a fill factor. Consider having
    a page size of 64 bytes and rows that are 34 bytes long. In this case we can
-   only fit one row in each page and 50% of the page is wasted. In this case
+   only fit one row in each page and half of the page is wasted. In this case
    each row will occupy 64 bytes of disk space and 64 bytes of memory even though
-   the rows are only actually 34 bytes each.
+   the rows are only actually 34 bytes each. In this case increasing the page
+   size to 68 bytes would make the database consume half as much memory and half as
+   much disk space as well as making it twice as fast because it only has to read
+   half as much data from the hard drives.
+
+Note that pages are used for everything and are the smallest division of storage.
+This means that every data structure occupies at least one page. Lets say that 
+the file set contains 20 different data structures (list of tables, table schemas,
+list of indexes, index defintitions, row mappings for each table, etc etc) then the 
+file set would occupy 20 pages even with no data. If you make your page size 1MB 
+then then an empty database will be 20 MB in this case. This is not normally an 
+issue unless you make the page size very large. Each table occupies at least two pages
+(one for tracking the pages that contain the data and one for the data) which
+means that if you have thousands of tables the database can be quite large even when
+it is empty.
 
 ### File sets
 If your application is not constrained by disk I/O throughput and all of your
 tables can use the same page size then you can put all of your database objects
 such as tables, indexes, stored procedures etc into a single file set and configure
-it with a single data file and a single log file. This makes it very convenient
-to manage the files.
+the file set with a single data file and a single log file. This makes it very 
+convenient to manage the files but is the least performant option.
 
 If you want to use different page sizes on different tables within your database 
 then you will need to configure multiple file sets because the page size is defined
@@ -158,11 +183,11 @@ for these file sets.
 
 To improve performance you can split the file set into multiple data files and/or
 log files.This improves performance because disk I/O operations are serialized
-and threads have to wait their turn to access the file. For many database operations
-most of the data is in cache and does not require many disk IO operations to complete.
-Updates are always applied to the log file first then applied to the data file
-only after all log file updates are flushed to disk, so these don't block the
-executing transaction.
+for each file and threads have to wait their turn to access the file. For many 
+database operations most of the data is in cache and does not require many disk 
+IO operations to complete. Updates are always applied to the log file first then 
+applied to the data file only after all log file updates are flushed to disk, so 
+these don't block the executing transaction.
 
 For applications that make a lot of small updates it helps to have more log files
 because the updates can be stored in the logs using one thread for each log file.
@@ -209,3 +234,5 @@ For example in the Employee to Company relationship I can store the employee's s
 date then easily find all employees who have been employed less than a year without
 touching the employee table at all.
 
+Note that RestDB allows you to make graph queries against non-graph oriented tables
+but this is orders of magnitude slower than if you used graph oriented tables.
