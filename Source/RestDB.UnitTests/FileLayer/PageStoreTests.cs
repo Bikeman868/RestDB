@@ -14,13 +14,13 @@ using System.Threading;
 
 namespace RestDB.UnitTests.FileLayer
 {
-    public class PageCacheTests: TestBase
+    public class PageStoreTests: TestBase
     {
         const uint _pageSize = 64;
 
         IPagePoolFactory _pagePoolFactory;
         IPagePool _pagePool;
-        IStartupLog _startUpLog;
+        IStartupLog _startupLog;
         IErrorLog _errorLog;
         IDatabase _database;
 
@@ -31,12 +31,12 @@ namespace RestDB.UnitTests.FileLayer
         FileInfo _dataFileInfo2;
 
         IFileSet _fileSet;
-        IPageCache _pageCache;
+        IPageStore _pageStore;
 
         [SetUp]
         public void Setup()
         {
-            _startUpLog = SetupMock<IStartupLog>();
+            _startupLog = SetupMock<IStartupLog>();
             _errorLog = SetupMock<IErrorLog>();
             _pagePoolFactory = SetupMock<IPagePoolFactory>();
             _pagePool = _pagePoolFactory.Create(_pageSize);
@@ -48,15 +48,16 @@ namespace RestDB.UnitTests.FileLayer
             _dataFileInfo2 = new FileInfo("C:\\temp\\test2.mdf");
 
             _fileSet = new FileSet(
-                new IDataFile[] { new DataFile(_dataFileInfo1, _pageSize, _startUpLog), new DataFile(_dataFileInfo2, _pageSize, _startUpLog) },
-                new ILogFile[] { new LogFile(_logFileInfo1, true, _startUpLog), new LogFile(_logFileInfo2, true, _startUpLog) },
+                new IDataFile[] { new DataFile(_dataFileInfo1, _pageSize, _startupLog), new DataFile(_dataFileInfo2, _pageSize, _startupLog) },
+                new ILogFile[] { new LogFile(_logFileInfo1, true, _startupLog), new LogFile(_logFileInfo2, true, _startupLog) },
                 _pagePoolFactory,
-                _startUpLog);
+                _startupLog);
 
             var databaseFactory = SetupMock<IDatabaseFactory>();
             _database = databaseFactory.Open(null);
 
-            _pageCache = new PageCache(_fileSet, _database, _pagePoolFactory, _startUpLog, _errorLog);
+            var pageCache = new PageCache(_fileSet, _database, _pagePoolFactory, _startupLog, _errorLog);
+            _pageStore = new PageStore(pageCache, _startupLog);
         }
 
         [TearDown]
@@ -64,8 +65,8 @@ namespace RestDB.UnitTests.FileLayer
         {
             Console.WriteLine();
 
-            if (_pageCache != null)
-                _pageCache.Dispose();
+            if (_pageStore != null)
+                _pageStore.Dispose();
 
             Reset();
         }
@@ -75,9 +76,9 @@ namespace RestDB.UnitTests.FileLayer
         {
             var transaction = _database.BeginTransaction(null);
 
-            _pageCache.BeginTransaction(transaction);
+            _pageStore.BeginTransaction(transaction);
 
-            _pageCache.Update(
+            _pageStore.Update(
                 transaction, new[] 
                 {
                     new PageUpdate
@@ -89,7 +90,7 @@ namespace RestDB.UnitTests.FileLayer
                     }
                 });
 
-            using (var page = _pageCache.Get(transaction, 1, CacheHints.None))
+            using (var page = _pageStore.Get(transaction, 1, CacheHints.None))
             {
                 Assert.AreEqual(1, page.Data[10]);
                 Assert.AreEqual(2, page.Data[11]);
@@ -97,8 +98,75 @@ namespace RestDB.UnitTests.FileLayer
             }
 
             _database.CommitTransaction(transaction);
-            _pageCache.CommitTransaction(transaction);
-            _pageCache.FinalizeTransaction(transaction);
+            _pageStore.CommitTransaction(transaction);
+            _pageStore.FinalizeTransaction(transaction);
+        }
+
+        [Test]
+        public void should_apply_updates_in_sequence()
+        {
+            const ulong pageNumber = 1UL;
+
+            var transaction = _database.BeginTransaction(null);
+            _pageStore.BeginTransaction(transaction);
+
+            _pageStore.Update(
+                transaction, new[]
+                {
+                    new PageUpdate
+                    {
+                        SequenceNumber = 2,
+                        PageNumber = pageNumber,
+                        Offset = 11,
+                        Data = new byte[]{ 2, 2, 2, 2, 2 }
+                    },
+                    new PageUpdate
+                    {
+                        SequenceNumber = 1,
+                        PageNumber = pageNumber,
+                        Offset = 10,
+                        Data = new byte[]{ 1, 1, 1, 1, 1 }
+                    },
+                    new PageUpdate
+                    {
+                        SequenceNumber = 3,
+                        PageNumber = pageNumber,
+                        Offset = 12,
+                        Data = new byte[]{ 3, 3, 3, 3, 3 }
+                    }
+                });
+
+            using (var page = _pageStore.Get(transaction, pageNumber, CacheHints.None))
+            {
+                Assert.AreEqual(1, page.Data[10]);
+                Assert.AreEqual(2, page.Data[11]);
+                Assert.AreEqual(3, page.Data[12]);
+                Assert.AreEqual(3, page.Data[13]);
+                Assert.AreEqual(3, page.Data[14]);
+                Assert.AreEqual(3, page.Data[15]);
+                Assert.AreEqual(3, page.Data[16]);
+            }
+
+            _database.CommitTransaction(transaction);
+            _pageStore.CommitTransaction(transaction);
+            _pageStore.FinalizeTransaction(transaction);
+
+            transaction = _database.BeginTransaction(null);
+            _pageStore.BeginTransaction(transaction);
+
+            using (var page = _pageStore.Get(transaction, pageNumber, CacheHints.None))
+            {
+                Assert.AreEqual(1, page.Data[10]);
+                Assert.AreEqual(2, page.Data[11]);
+                Assert.AreEqual(3, page.Data[12]);
+                Assert.AreEqual(3, page.Data[13]);
+                Assert.AreEqual(3, page.Data[14]);
+                Assert.AreEqual(3, page.Data[15]);
+                Assert.AreEqual(3, page.Data[16]);
+            }
+
+            _database.CommitTransaction(transaction);
+            _pageStore.CommitTransaction(transaction);
         }
 
         [Test]
@@ -108,10 +176,10 @@ namespace RestDB.UnitTests.FileLayer
             var transaction2 = _database.BeginTransaction(null);
             var transaction3 = _database.BeginTransaction(null);
 
-            _pageCache.BeginTransaction(transaction1);
-            _pageCache.BeginTransaction(transaction2);
+            _pageStore.BeginTransaction(transaction1);
+            _pageStore.BeginTransaction(transaction2);
 
-            _pageCache.Update(
+            _pageStore.Update(
                 transaction2, new[]
                 {
                     new PageUpdate
@@ -123,53 +191,53 @@ namespace RestDB.UnitTests.FileLayer
                     }
                 });
 
-            _pageCache.BeginTransaction(transaction3);
+            _pageStore.BeginTransaction(transaction3);
 
-            using (var page = _pageCache.Get(transaction1, 1, CacheHints.None))
+            using (var page = _pageStore.Get(transaction1, 1, CacheHints.None))
             {
                 Assert.AreEqual(0, page.Data[10]);
                 Assert.AreEqual(0, page.Data[11]);
                 Assert.AreEqual(0, page.Data[12]);
             }
 
-            using (var page = _pageCache.Get(transaction2, 1, CacheHints.None))
+            using (var page = _pageStore.Get(transaction2, 1, CacheHints.None))
             {
                 Assert.AreEqual(1, page.Data[10]);
                 Assert.AreEqual(2, page.Data[11]);
                 Assert.AreEqual(3, page.Data[12]);
             }
 
-            using (var page = _pageCache.Get(transaction3, 1, CacheHints.None))
+            using (var page = _pageStore.Get(transaction3, 1, CacheHints.None))
             { 
                 Assert.AreEqual(0, page.Data[10]);
                 Assert.AreEqual(0, page.Data[11]);
                 Assert.AreEqual(0, page.Data[12]);
             }
 
-            _pageCache.RollbackTransaction(transaction1);
-            _pageCache.RollbackTransaction(transaction3);
+            _pageStore.RollbackTransaction(transaction1);
+            _pageStore.RollbackTransaction(transaction3);
 
             _database.CommitTransaction(transaction2);
-            _pageCache.CommitTransaction(transaction2);
-            _pageCache.FinalizeTransaction(transaction2);
+            _pageStore.CommitTransaction(transaction2);
+            _pageStore.FinalizeTransaction(transaction2);
 
             var transaction4 = _database.BeginTransaction(null);
-            _pageCache.BeginTransaction(transaction4);
+            _pageStore.BeginTransaction(transaction4);
 
-            using (var page = _pageCache.Get(transaction4, 1, CacheHints.None))
+            using (var page = _pageStore.Get(transaction4, 1, CacheHints.None))
             {
                 Assert.AreEqual(1, page.Data[10]);
                 Assert.AreEqual(2, page.Data[11]);
                 Assert.AreEqual(3, page.Data[12]);
             }
 
-            _pageCache.RollbackTransaction(transaction4);
+            _pageStore.RollbackTransaction(transaction4);
         }
 
         [Test]
         public void should_not_isolate_with_no_transaction()
         {
-            _pageCache.Update(
+            _pageStore.Update(
                 null, new[]
                 {
                     new PageUpdate
@@ -181,7 +249,7 @@ namespace RestDB.UnitTests.FileLayer
                     }
                 });
 
-            using (var page = _pageCache.Get(null, 1, CacheHints.None))
+            using (var page = _pageStore.Get(null, 1, CacheHints.None))
             {
                 Assert.AreEqual(1, page.Data[10]);
                 Assert.AreEqual(2, page.Data[11]);
@@ -189,9 +257,9 @@ namespace RestDB.UnitTests.FileLayer
             }
 
             var transaction = _database.BeginTransaction(null);
-            _pageCache.BeginTransaction(transaction);
+            _pageStore.BeginTransaction(transaction);
 
-            using (var page = _pageCache.Get(transaction, 1, CacheHints.None))
+            using (var page = _pageStore.Get(transaction, 1, CacheHints.None))
             {
                 Assert.AreEqual(1, page.Data[10]);
                 Assert.AreEqual(2, page.Data[11]);
@@ -199,7 +267,7 @@ namespace RestDB.UnitTests.FileLayer
             }
 
             _database.RollbackTransaction(transaction);
-            _pageCache.RollbackTransaction(transaction);
+            _pageStore.RollbackTransaction(transaction);
         }
 
         [Test]
@@ -210,8 +278,8 @@ namespace RestDB.UnitTests.FileLayer
             // Modify some pages within a transaction
 
             var transaction1 = _database.BeginTransaction(null);
-            _pageCache.BeginTransaction(transaction1);
-            _pageCache.Update(
+            _pageStore.BeginTransaction(transaction1);
+            _pageStore.Update(
                 transaction1, new[]
                 {
                     new PageUpdate
@@ -231,14 +299,14 @@ namespace RestDB.UnitTests.FileLayer
 
                 });
             _database.CommitTransaction(transaction1);
-            _pageCache.CommitTransaction(transaction1);
-            _pageCache.FinalizeTransaction(transaction1);
+            _pageStore.CommitTransaction(transaction1);
+            _pageStore.FinalizeTransaction(transaction1);
 
             // Start a transaction and read one of the modified pages
 
             var transaction2 = _database.BeginTransaction(null);
-            _pageCache.BeginTransaction(transaction2);
-            using (var page = _pageCache.Get(transaction2, pageNumber, CacheHints.None))
+            _pageStore.BeginTransaction(transaction2);
+            using (var page = _pageStore.Get(transaction2, pageNumber, CacheHints.None))
             {
                 Assert.AreEqual(98, page.Data[3]);
                 Assert.AreEqual(99, page.Data[4]);
@@ -250,8 +318,8 @@ namespace RestDB.UnitTests.FileLayer
             for (var i = 0; i < 5; i++)
             {
                 var transaction = _database.BeginTransaction(null);
-                _pageCache.BeginTransaction(transaction);
-                _pageCache.Update(
+                _pageStore.BeginTransaction(transaction);
+                _pageStore.Update(
                     transaction, new[]
                     {
                         new PageUpdate
@@ -270,13 +338,13 @@ namespace RestDB.UnitTests.FileLayer
                         }
                     });
                 _database.CommitTransaction(transaction);
-                _pageCache.CommitTransaction(transaction);
-                _pageCache.FinalizeTransaction(transaction);
+                _pageStore.CommitTransaction(transaction);
+                _pageStore.FinalizeTransaction(transaction);
             }
 
             // Verify that the open transaction has read consistency
 
-            using (var page = _pageCache.Get(transaction2, pageNumber, CacheHints.None))
+            using (var page = _pageStore.Get(transaction2, pageNumber, CacheHints.None))
             {
                 Assert.AreEqual(98, page.Data[3]);
                 Assert.AreEqual(99, page.Data[4]);
@@ -285,26 +353,26 @@ namespace RestDB.UnitTests.FileLayer
 
             // Verify that the open transaction can not see the updates
 
-            using (var page = _pageCache.Get(transaction2, pageNumber + 1, CacheHints.None))
+            using (var page = _pageStore.Get(transaction2, pageNumber + 1, CacheHints.None))
             {
                 Assert.AreEqual(98, page.Data[10]);
                 Assert.AreEqual(99, page.Data[11]);
                 Assert.AreEqual(100, page.Data[12]);
             }
-            _pageCache.RollbackTransaction(transaction2);
+            _pageStore.RollbackTransaction(transaction2);
 
             // Verify that a new transaction does see the updated values
 
             var transaction3 = _database.BeginTransaction(null);
-            _pageCache.BeginTransaction(transaction3);
+            _pageStore.BeginTransaction(transaction3);
 
-            using (var page = _pageCache.Get(transaction3, pageNumber, CacheHints.None))
+            using (var page = _pageStore.Get(transaction3, pageNumber, CacheHints.None))
             {
                 Assert.AreEqual(4, page.Data[3]);
                 Assert.AreEqual(5, page.Data[4]);
                 Assert.AreEqual(6, page.Data[5]);
             }
-            using (var page = _pageCache.Get(transaction3, pageNumber + 1, CacheHints.None))
+            using (var page = _pageStore.Get(transaction3, pageNumber + 1, CacheHints.None))
             {
                 Assert.AreEqual(4, page.Data[10]);
                 Assert.AreEqual(5, page.Data[11]);
@@ -330,9 +398,9 @@ namespace RestDB.UnitTests.FileLayer
             const ulong pageNumber = 1UL;
 
             var transaction = _database.BeginTransaction(null);
-            _pageCache.BeginTransaction(transaction);
+            _pageStore.BeginTransaction(transaction);
 
-            _pageCache.Update(
+            _pageStore.Update(
                 transaction, new[]
                 {
                     new PageUpdate
@@ -344,14 +412,14 @@ namespace RestDB.UnitTests.FileLayer
                     }
                 });
 
-            using (var page = _pageCache.Get(transaction, pageNumber, CacheHints.None))
+            using (var page = _pageStore.Get(transaction, pageNumber, CacheHints.None))
             {
                 Assert.AreEqual(1, page.Data[10]);
                 Assert.AreEqual(2, page.Data[11]);
                 Assert.AreEqual(3, page.Data[12]);
             }
 
-            using (var page = _pageCache.Get(null, pageNumber, CacheHints.None))
+            using (var page = _pageStore.Get(null, pageNumber, CacheHints.None))
             {
                 Assert.AreEqual(0, page.Data[10]);
                 Assert.AreEqual(0, page.Data[11]);
@@ -359,10 +427,10 @@ namespace RestDB.UnitTests.FileLayer
             }
 
             _database.CommitTransaction(transaction);
-            _pageCache.CommitTransaction(transaction);
-            _pageCache.FinalizeTransaction(transaction);
+            _pageStore.CommitTransaction(transaction);
+            _pageStore.FinalizeTransaction(transaction);
 
-            using (var page = _pageCache.Get(null, pageNumber, CacheHints.None))
+            using (var page = _pageStore.Get(null, pageNumber, CacheHints.None))
             {
                 Assert.AreEqual(1, page.Data[10]);
                 Assert.AreEqual(2, page.Data[11]);
@@ -380,24 +448,23 @@ namespace RestDB.UnitTests.FileLayer
             ThreadStart threadAction = () =>
             {
                 var transaction = _database.BeginTransaction(null);
-                _pageCache.BeginTransaction(transaction);
+                _pageStore.BeginTransaction(transaction);
 
-                _pageCache.Lock(transaction, pageNumber);
+                _pageStore.Lock(transaction, pageNumber);
 
                 Thread.Sleep(1);
 
                 uint count;
-                using (var page = _pageCache.Get(transaction, pageNumber, CacheHints.ForUpdate))
+                using (var page = _pageStore.Get(transaction, pageNumber, CacheHints.ForUpdate))
                     count = BitConverter.ToUInt32(page.Data, (int)pageOffset);
 
                 Thread.Sleep(1);
 
-                _pageCache.Update(
+                _pageStore.Update(
                     transaction, new[]
                     {
                         new PageUpdate
                         {
-                            SequenceNumber = 1,
                             PageNumber = pageNumber,
                             Offset = pageOffset,
                             Data = BitConverter.GetBytes(count + 1U)
@@ -405,8 +472,8 @@ namespace RestDB.UnitTests.FileLayer
                     });
 
                 _database.CommitTransaction(transaction);
-                _pageCache.CommitTransaction(transaction);
-                _pageCache.FinalizeTransaction(transaction);
+                _pageStore.CommitTransaction(transaction);
+                _pageStore.FinalizeTransaction(transaction);
             };
 
             var threads = new List<Thread>();
@@ -418,10 +485,76 @@ namespace RestDB.UnitTests.FileLayer
             foreach (var thread in threads) thread.Join();
 
             var readTransaction = _database.BeginTransaction(null);
-            _pageCache.BeginTransaction(readTransaction);
+            _pageStore.BeginTransaction(readTransaction);
 
-            using (var page = _pageCache.Get(readTransaction, pageNumber, CacheHints.None))
+            using (var page = _pageStore.Get(readTransaction, pageNumber, CacheHints.None))
                 Assert.AreEqual(threadCount, BitConverter.ToUInt32(page.Data, (int)pageOffset));
+        }
+
+        [Test]
+        public void should_allow_relocking_a_page()
+        {
+            const ulong pageNumber = 3;
+
+            // Update a page without a lock
+
+            var updateTransaction = _database.BeginTransaction(null);
+            _pageStore.BeginTransaction(updateTransaction);
+
+            _pageStore.Update(
+                updateTransaction, new[]
+                {
+                    new PageUpdate
+                    {
+                        PageNumber = pageNumber,
+                        Offset = 3,
+                        Data = new byte[]{ 98, 99, 100 }
+                    }
+                });
+
+            // Lock and update the page multiple times
+
+            for (byte i = 10; i < 15; i++)
+            {
+                _pageStore.Lock(updateTransaction, pageNumber);
+
+                _pageStore.Update(
+                    updateTransaction, new[]
+                    {
+                        new PageUpdate
+                        {
+                            PageNumber = pageNumber,
+                            Offset = i,
+                            Data = new byte[]{ i }
+                        }
+                    });
+            }
+
+            // Commit all the changes to disk
+
+            _database.CommitTransaction(updateTransaction);
+            _pageStore.CommitTransaction(updateTransaction);
+            _pageStore.FinalizeTransaction(updateTransaction);
+
+            // Check that the changes were written properly
+
+            var readTransaction = _database.BeginTransaction(null);
+            _pageStore.BeginTransaction(readTransaction);
+
+            using (var page = _pageStore.Get(readTransaction, pageNumber, CacheHints.None))
+            {
+                Assert.AreEqual(98, page.Data[3]);
+                Assert.AreEqual(99, page.Data[4]);
+                Assert.AreEqual(100, page.Data[5]);
+                Assert.AreEqual(10, page.Data[10]);
+                Assert.AreEqual(11, page.Data[11]);
+                Assert.AreEqual(12, page.Data[12]);
+                Assert.AreEqual(13, page.Data[13]);
+                Assert.AreEqual(14, page.Data[14]);
+            }
+
+            _database.RollbackTransaction(readTransaction);
+            _pageStore.RollbackTransaction(readTransaction);
         }
     }
 }

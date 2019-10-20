@@ -158,13 +158,32 @@ namespace RestDB.FileLayer.Pages
 
         public void Update(ITransaction transaction, IEnumerable<PageUpdate> updates, PageHeadCollection pages)
         {
+            if (transaction == null)
+            {
+                IPage page = null;
+
+                foreach (var update in updates.OrderBy(u => u.PageNumber).ThenBy(u => u.SequenceNumber))
+                {
+                    if (page == null || page.PageNumber != update.PageNumber)
+                    {
+                        if (page != null) page.Dispose();
+                        page = pages.GetPageHead(update.PageNumber, CacheHints.ForUpdate).GetVersion(null);
+                    }
+                    update.Data.CopyTo(page.Data, update.Offset);
+                }
+
+                if (page != null) page.Dispose();
+
+                return;
+            }
+
             TransactionHead transactionHead;
+
             lock (_transactions)
                 if (!_transactions.TryGetValue(transaction.TransactionId, out transactionHead))
                     throw new FileLayerException("You can not apply updates to a transaction context before the transaction has begun or after it has ended");
 
             transactionHead.AddUpdates(updates, pages);
-
         }
     }
 }

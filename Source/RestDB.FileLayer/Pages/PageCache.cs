@@ -170,9 +170,9 @@ namespace RestDB.FileLayer.Pages
         IPageCache IPageCache.Update(ITransaction transaction, IEnumerable<PageUpdate> updates)
         {
             if (transaction == null)
-                _fileSet.Write(transaction, updates);
-            else
-                _transactions.Update(transaction, updates, _pages);
+                _fileSet.Write(null, updates);
+
+            _transactions.Update(transaction, updates, _pages);
 
             return this;
         }

@@ -16,7 +16,7 @@ using System.Threading;
 
 namespace RestDB.UnitTests.FileLayer
 {
-    public class SmallSequentialAccessorTests : TestBase
+    public class SmallSequentialAccessorIntegrationTests : TestBase
     {
         const uint _pageSize = 64;
 
@@ -33,7 +33,6 @@ namespace RestDB.UnitTests.FileLayer
         ILogFile _logFile;
 
         IFileSet _fileSet;
-        IPageCache _pageCache;
         IPageStore _pageStore;
         ISequentialRecordAccessor _accessor;
 
@@ -58,11 +57,10 @@ namespace RestDB.UnitTests.FileLayer
             var databaseFactory = SetupMock<IDatabaseFactory>();
             _database = databaseFactory.Open(null);
 
-            _pageCache = new PageCache(_fileSet, _database, _pagePoolFactory, _startUpLog, _errorLog);
+            var pageCache = new PageCache(_fileSet, _database, _pagePoolFactory, _startUpLog, _errorLog);
+            _pageStore = new PageStore(pageCache, _startUpLog);
 
             _accessorFactory = new AccessorFactory();
-
-            _pageStore = new PageStore(_pageCache, _startUpLog);
             _accessor = _accessorFactory.SmallSequentialAccessor(_pageStore);
         }
 
@@ -75,65 +73,6 @@ namespace RestDB.UnitTests.FileLayer
                 _pageStore.Dispose();
 
             Reset();
-        }
-
-        [Test]
-        public void should_read_and_write_records()
-        {
-            const ushort objectType = 128;
-
-            var strings = new[]
-            {
-                "The short brown lazy dog couldn't jump over anything",
-                "One, two, buckle my shoe",
-                "YARD (Yet Another Relational Database)",
-                "This is a test, one, two, three, testing",
-                "Blah blah blah",
-                "This should be on a second index page",
-                "OK, I think that's enough now"
-            };
-
-            var transaction = _database.BeginTransaction(null);
-            _pageCache.BeginTransaction(transaction);
-
-            _accessor.Clear(objectType, transaction);
-            foreach(var s in strings)
-                _accessor.Append(objectType, transaction, Encoding.UTF8.GetBytes(s));
-
-            _database.CommitTransaction(transaction);
-            _pageCache.CommitTransaction(transaction);
-            _pageCache.FinalizeTransaction(transaction);
-
-            transaction = _database.BeginTransaction(null);
-            _pageCache.BeginTransaction(transaction);
-
-            Action<PageLocation, string> check = (location, expected) =>
-            {
-                using (var page = _pageCache.Get(transaction, location.PageNumber, CacheHints.None))
-                {
-                    var actual = Encoding.UTF8.GetString(page.Data, (int)location.Offset, (int)location.Length);
-                    Assert.AreEqual(expected, actual);
-                }
-            };
-
-            var record = _accessor.LocateFirst(objectType, transaction, out object indexLocation);
-            Assert.IsNotNull(record);
-
-            foreach (var s in strings)
-            {
-                check(record, s);
-                record = _accessor.LocateNext(objectType, transaction, indexLocation);
-            }
-
-            Assert.IsNull(record);
-
-            _database.RollbackTransaction(transaction);
-            _pageCache.RollbackTransaction(transaction);
-        }
-
-        [Test]
-        public void should_delete_small_sequential_records()
-        {
         }
 
         [Test]
@@ -152,20 +91,19 @@ namespace RestDB.UnitTests.FileLayer
                     try
                     {
                         var writeTransaction = _database.BeginTransaction(null);
-                        _pageCache.BeginTransaction(writeTransaction);
-
-                        Thread.Sleep(transactionNumber);
+                        _pageStore.BeginTransaction(writeTransaction);
 
                         _accessor.Append(objectType, writeTransaction, Encoding.UTF8.GetBytes("Transaction " + transactionNumber));
 
-                        Thread.Sleep(5);
+                        Thread.Sleep(50);
 
                         _database.CommitTransaction(writeTransaction);
-                        _pageCache.CommitTransaction(writeTransaction);
+                        _pageStore.CommitTransaction(writeTransaction);
                     }
                     catch(Exception ex)
                     {
-                        exceptions.Add(ex);
+                        lock(exceptions)
+                            exceptions.Add(ex);
                     }
                 });
                 threads.Add(thread);
@@ -177,13 +115,13 @@ namespace RestDB.UnitTests.FileLayer
             Assert.AreEqual(0, exceptions.Count);
 
             var transaction = _database.BeginTransaction(null);
-            _pageCache.BeginTransaction(transaction);
+            _pageStore.BeginTransaction(transaction);
 
             var results = new HashSet<string>();
 
             Action<PageLocation> check = (location) =>
             {
-                using (var page = _pageCache.Get(transaction, location.PageNumber, CacheHints.None))
+                using (var page = _pageStore.Get(transaction, location.PageNumber, CacheHints.None))
                 {
                     var actual = Encoding.UTF8.GetString(page.Data, (int)location.Offset, (int)location.Length);
                     Assert.IsTrue(results.Add(actual));

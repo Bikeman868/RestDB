@@ -1,4 +1,5 @@
 ﻿using RestDB.Interfaces.DatabaseLayer;
+using System.Collections.Generic;
 
 namespace RestDB.Interfaces.FileLayer
 {
@@ -9,6 +10,14 @@ namespace RestDB.Interfaces.FileLayer
     /// </summary>
     public interface ISequentialRecordAccessor
     {
+        /// <summary>
+        /// Returns an enumerator for a spcific type of object in the context of a transaction
+        /// </summary>
+        /// <param name="objectType"></param>
+        /// <param name="transaction"></param>
+        /// <returns></returns>
+        IEnumerable<PageLocation> Enumerate(ushort objectType, ITransaction transaction);
+
         /// <summary>
         /// Locates the first object in the list
         /// </summary>
