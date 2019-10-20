@@ -30,7 +30,11 @@ namespace RestDB.UnitTests.Mocks.FileLayer
 
         public ulong Allocate()
         {
-            return _nextPage++;
+            var pageNumber = _nextPage++;
+
+            _pages.Add(pageNumber, _pagePool.Get(pageNumber, true));
+
+            return pageNumber;
         }
 
         public IPageCache BeginTransaction(ITransaction transaction)

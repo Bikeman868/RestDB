@@ -79,7 +79,7 @@ namespace RestDB.UnitTests.FileLayer
         public void should_allow_multiple_transactions_to_append_records()
         {
             const ushort objectType = 128;
-            const int threadCount = 1;
+            const int threadCount = 5;
 
             var threads = new List<Thread>();
             var exceptions = new List<Exception>();

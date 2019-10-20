@@ -273,7 +273,8 @@ namespace RestDB.UnitTests.FileLayer
         [Test]
         public void should_snapshot_at_start_of_transaction()
         {
-            const ulong pageNumber = 5;
+            var firstPage = _pageStore.Allocate();
+            var secondPage = _pageStore.Allocate();
 
             // Modify some pages within a transaction
 
@@ -285,14 +286,14 @@ namespace RestDB.UnitTests.FileLayer
                     new PageUpdate
                     {
                         SequenceNumber = 1,
-                        PageNumber = pageNumber,
+                        PageNumber = firstPage,
                         Offset = 3,
                         Data = new byte[]{ 98, 99, 100 }
                     },
                     new PageUpdate
                     {
                         SequenceNumber = 2,
-                        PageNumber = pageNumber + 1,
+                        PageNumber = secondPage,
                         Offset = 10,
                         Data = new byte[]{ 98, 99, 100 }
                     },
@@ -306,7 +307,7 @@ namespace RestDB.UnitTests.FileLayer
 
             var transaction2 = _database.BeginTransaction(null);
             _pageStore.BeginTransaction(transaction2);
-            using (var page = _pageStore.Get(transaction2, pageNumber, CacheHints.None))
+            using (var page = _pageStore.Get(transaction2, firstPage, CacheHints.None))
             {
                 Assert.AreEqual(98, page.Data[3]);
                 Assert.AreEqual(99, page.Data[4]);
@@ -325,14 +326,14 @@ namespace RestDB.UnitTests.FileLayer
                         new PageUpdate
                         {
                             SequenceNumber = 1,
-                            PageNumber = pageNumber,
+                            PageNumber = firstPage,
                             Offset = 3,
                             Data = new byte[]{ (byte)i, (byte)(i+1), (byte)(i+2) }
                         },
                         new PageUpdate
                         {
                             SequenceNumber = 2,
-                            PageNumber = pageNumber + 1,
+                            PageNumber = secondPage,
                             Offset = 10,
                             Data = new byte[]{ (byte)i, (byte)(i+1), (byte)(i+2) }
                         }
@@ -344,7 +345,7 @@ namespace RestDB.UnitTests.FileLayer
 
             // Verify that the open transaction has read consistency
 
-            using (var page = _pageStore.Get(transaction2, pageNumber, CacheHints.None))
+            using (var page = _pageStore.Get(transaction2, firstPage, CacheHints.None))
             {
                 Assert.AreEqual(98, page.Data[3]);
                 Assert.AreEqual(99, page.Data[4]);
@@ -353,7 +354,7 @@ namespace RestDB.UnitTests.FileLayer
 
             // Verify that the open transaction can not see the updates
 
-            using (var page = _pageStore.Get(transaction2, pageNumber + 1, CacheHints.None))
+            using (var page = _pageStore.Get(transaction2, secondPage, CacheHints.None))
             {
                 Assert.AreEqual(98, page.Data[10]);
                 Assert.AreEqual(99, page.Data[11]);
@@ -366,13 +367,13 @@ namespace RestDB.UnitTests.FileLayer
             var transaction3 = _database.BeginTransaction(null);
             _pageStore.BeginTransaction(transaction3);
 
-            using (var page = _pageStore.Get(transaction3, pageNumber, CacheHints.None))
+            using (var page = _pageStore.Get(transaction3, firstPage, CacheHints.None))
             {
                 Assert.AreEqual(4, page.Data[3]);
                 Assert.AreEqual(5, page.Data[4]);
                 Assert.AreEqual(6, page.Data[5]);
             }
-            using (var page = _pageStore.Get(transaction3, pageNumber + 1, CacheHints.None))
+            using (var page = _pageStore.Get(transaction3, secondPage, CacheHints.None))
             {
                 Assert.AreEqual(4, page.Data[10]);
                 Assert.AreEqual(5, page.Data[11]);
@@ -494,7 +495,7 @@ namespace RestDB.UnitTests.FileLayer
         [Test]
         public void should_allow_relocking_a_page()
         {
-            const ulong pageNumber = 3;
+            var pageNumber = _pageStore.GetFirstIndexPage(128);
 
             // Update a page without a lock
 

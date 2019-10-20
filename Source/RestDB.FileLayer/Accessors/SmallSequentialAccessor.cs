@@ -153,17 +153,6 @@ namespace RestDB.FileLayer.Accessors
                 Data = newIndexEntry
             });
 
-            if (indexLocation.Offset + _indexEntrySize + _indexEntrySize <= pageSize)
-            {
-                updates.Add(new PageUpdate
-                {
-                    SequenceNumber = sequence++,
-                    PageNumber = indexLocation.PageNumber,
-                    Offset = indexLocation.Offset + _indexEntrySize,
-                    Data = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
-                });
-            }
-
             _pageStore.Update(transaction, updates);
 
             return recordLocation;

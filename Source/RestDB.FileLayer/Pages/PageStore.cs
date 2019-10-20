@@ -153,6 +153,8 @@ namespace RestDB.FileLayer.Pages
         {
             var pageNumber = (ulong)Interlocked.Increment(ref _highestPageNumber);
 
+            _pageCache.NewPage(pageNumber);
+
             _pageCache.Update(null, new[]
             {
                 new PageUpdate
