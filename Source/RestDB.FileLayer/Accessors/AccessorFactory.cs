@@ -11,7 +11,7 @@ namespace RestDB.FileLayer.Accessors
 
         ISequentialRecordAccessor IAccessorFactory.LargeSequentialAccessor(IPageStore pageStore)
         {
-            throw new System.NotImplementedException();
+            return new LargeSequentialAccessor(pageStore);
         }
 
         IRandomRecordAccessor IAccessorFactory.LargeVariableRandomAccessor(IPageStore pageStore)

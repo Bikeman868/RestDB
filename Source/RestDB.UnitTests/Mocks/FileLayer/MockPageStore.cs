@@ -28,11 +28,13 @@ namespace RestDB.UnitTests.Mocks.FileLayer
 
         public uint PageSize => _pageSize;
 
-        public ulong Allocate()
+        public ulong Allocate(ushort pageCount)
         {
-            var pageNumber = _nextPage++;
+            var pageNumber = _nextPage;
+            _nextPage += pageCount;
 
-            _pages.Add(pageNumber, _pagePool.Get(pageNumber, true));
+            for (ushort i = 0; i < pageCount; i++)
+                _pages.Add(pageNumber + i, _pagePool.Get(pageNumber + i, true));
 
             return pageNumber;
         }
@@ -70,7 +72,7 @@ namespace RestDB.UnitTests.Mocks.FileLayer
         {
             if (!_indexPages.TryGetValue(objectType, out ulong pageNumber))
             {
-                pageNumber = Allocate();
+                pageNumber = Allocate(1);
                 _indexPages.Add(objectType, pageNumber);
             }
             return pageNumber;

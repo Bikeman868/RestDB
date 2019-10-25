@@ -6,6 +6,11 @@
     public class PageLocation
     {
         /// <summary>
+        /// The page store where these pages are stored
+        /// </summary>
+        public IPageStore PageStore;
+
+        /// <summary>
         /// The page number of the page containing the first byte
         /// </summary>
         public ulong PageNumber;
@@ -19,7 +24,7 @@
         /// The length of the data. If the offset + length is greater than
         /// the page size then the record continues on further pages
         /// </summary>
-        public uint Length;
+        public ulong Length;
 
         /// <summary>
         /// When the record spans multiple pages this is a list of the additional

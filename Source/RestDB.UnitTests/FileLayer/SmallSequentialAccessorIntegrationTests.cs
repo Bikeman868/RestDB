@@ -94,12 +94,15 @@ namespace RestDB.UnitTests.FileLayer
                         var writeTransaction = _database.BeginTransaction(null);
                         _pageStore.BeginTransaction(writeTransaction);
 
-                        _accessor.Append(objectType, writeTransaction, Encoding.UTF8.GetBytes("Transaction " + transactionNumber));
+                        var buffer = Encoding.UTF8.GetBytes("Transaction " + transactionNumber);
+                        var location = _accessor.Append(objectType, writeTransaction, (uint)buffer.LongLength);
+                        _accessor.Write(writeTransaction, location, buffer);
 
                         Thread.Sleep(50);
 
                         _database.CommitTransaction(writeTransaction);
                         _pageStore.CommitTransaction(writeTransaction);
+                        _pageStore.FinalizeTransaction(writeTransaction);
                     }
                     catch (Exception ex)
                     {

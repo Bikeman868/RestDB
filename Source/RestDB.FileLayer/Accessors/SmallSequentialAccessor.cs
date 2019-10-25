@@ -2,13 +2,12 @@
 using RestDB.Interfaces.DatabaseLayer;
 using RestDB.Interfaces.FileLayer;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 
 /*
  * This accessor stores records in the page store as follows:
- * Some pages are index pages and others are data pages. The
  * 
+ * Some pages are index pages and others are data pages. The
  * Index pages are laid out as follows:
  * 
  * 8 bytes - page number of next index page or 0 if this is the last page of the index
@@ -48,22 +47,23 @@ namespace RestDB.FileLayer.Accessors
 
         PageLocation ISequentialRecordAccessor.Append(
             ushort objectType, 
-            ITransaction transaction, 
-            byte[] record)
+            ITransaction transaction,
+            ulong recordSize)
         {
-            if (record.Length == 0) return null;
+            if (recordSize == 0) return null;
 
             var pageSize = _pageStore.PageSize;
 
-            if (record.Length > pageSize)
-                throw new FileLayerException("Invalid attempt to write " + record.Length + 
+            if (recordSize > pageSize)
+                throw new FileLayerException("Invalid attempt to write " + recordSize + 
                     " bytes into a page store with " + pageSize + " byte pages");
 
             var updates = new List<PageUpdate>();
-            var sequence = 0U;
+            var sequence = 1U;
 
             PageLocation indexLocation = new PageLocation
             {
+                PageStore = _pageStore,
                 PageNumber = _pageStore.GetFirstIndexPage(objectType),
                 Offset = _indexPageHeadSize,
                 Length = _indexEntrySize
@@ -71,14 +71,15 @@ namespace RestDB.FileLayer.Accessors
 
             PageLocation recordLocation = new PageLocation
             {
-                Length = (uint)record.Length
+                PageStore = _pageStore,
+                Length = recordSize
             };
 
             while (true)
             {
                 _pageStore.Lock(transaction, indexLocation.PageNumber);
 
-                using (var indexPage = _pageStore.Get(transaction, indexLocation.PageNumber, CacheHints.MetaData))
+                using (var indexPage = _pageStore.Get(transaction, indexLocation.PageNumber, CacheHints.MetaData | CacheHints.WithLock))
                 {
                     var nextIndexPageNumber = BitConverter.ToUInt64(indexPage.Data, 0);
                     if (nextIndexPageNumber == 0UL)
@@ -127,7 +128,7 @@ namespace RestDB.FileLayer.Accessors
                 }
             }
 
-            if (recordLocation.PageNumber == 0UL || recordLocation.Offset + record.Length > pageSize)
+            if (recordLocation.PageNumber == 0UL || recordLocation.Offset + recordSize > pageSize)
             {
                 recordLocation.PageNumber = _pageStore.Allocate();
                 recordLocation.Offset = 0U;
@@ -135,15 +136,7 @@ namespace RestDB.FileLayer.Accessors
 
             var newIndexEntry = new byte[_indexEntrySize];
             BitConverter.GetBytes(recordLocation.PageNumber).CopyTo(newIndexEntry, 0);
-            BitConverter.GetBytes(recordLocation.Offset + (uint)record.Length).CopyTo(newIndexEntry, _pageNumberSize);
-
-            updates.Add(new PageUpdate
-            {
-                SequenceNumber = sequence++,
-                PageNumber = recordLocation.PageNumber,
-                Offset = recordLocation.Offset,
-                Data = record
-            });
+            BitConverter.GetBytes(recordLocation.Offset + (uint)recordSize).CopyTo(newIndexEntry, _pageNumberSize);
 
             updates.Add(new PageUpdate
             {
@@ -204,7 +197,7 @@ namespace RestDB.FileLayer.Accessors
 
         IEnumerable<PageLocation> ISequentialRecordAccessor.Enumerate(ushort objectType, ITransaction transaction)
         {
-            return new Enumerator(this, objectType, transaction);
+            return new SequentialRecordEnumerator(this, objectType, transaction);
         }
 
         PageLocation ISequentialRecordAccessor.LocateFirst(
@@ -214,6 +207,7 @@ namespace RestDB.FileLayer.Accessors
         {
             var indexPageLocation = new PageLocation
             {
+                PageStore = _pageStore,
                 PageNumber = _pageStore.GetFirstIndexPage(objectType),
                 Offset = _indexPageHeadSize,
                 Length = _indexEntrySize
@@ -232,6 +226,7 @@ namespace RestDB.FileLayer.Accessors
 
                 return new PageLocation
                 {
+                    PageStore = _pageStore,
                     PageNumber = pageNumber,
                     Offset = 0U,
                     Length = nextRecordOffset
@@ -287,6 +282,7 @@ namespace RestDB.FileLayer.Accessors
                     {
                         return new PageLocation
                         {
+                            PageStore = _pageStore,
                             PageNumber = nextRecordPageNumber,
                             Offset = 0,
                             Length = nextRecordNextRecordOffset
@@ -295,65 +291,12 @@ namespace RestDB.FileLayer.Accessors
 
                     return new PageLocation
                     {
+                        PageStore = _pageStore,
                         PageNumber = nextRecordPageNumber,
                         Offset = priorRecordNextRecordOffset,
                         Length = nextRecordNextRecordOffset - priorRecordNextRecordOffset
                     };
                 }
-            }
-        }
-
-        private class Enumerator: IEnumerable<PageLocation>, IEnumerator<PageLocation>
-        {
-            private ISequentialRecordAccessor _accessor;
-            private ushort _objectType;
-            private ITransaction _transaction;
-            private PageLocation _current;
-            private object _indexLocation;
-
-            public Enumerator(SmallSequentialAccessor accessor, ushort objectType, ITransaction transaction)
-            {
-                _accessor = accessor;
-                _objectType = objectType;
-                _transaction = transaction;
-            }
-
-            void IDisposable.Dispose()
-            {
-            }
-
-            IEnumerator<PageLocation> IEnumerable<PageLocation>.GetEnumerator()
-            {
-                ((IEnumerator)this).Reset();
-                return this;
-            }
-
-            IEnumerator IEnumerable.GetEnumerator()
-            {
-                return ((IEnumerable<PageLocation>)this).GetEnumerator();
-            }
-
-            PageLocation IEnumerator<PageLocation>.Current => _current;
-
-            object IEnumerator.Current => _current;
-
-            bool IEnumerator.MoveNext()
-            {
-                if (_current == null)
-                {
-                    if (_indexLocation != null) return false;
-                    _current = _accessor.LocateFirst(_objectType, _transaction, out _indexLocation);
-                }
-                else
-                    _current = _accessor.LocateNext(_objectType, _transaction, _indexLocation);
-
-                return _current != null;
-            }
-
-            void IEnumerator.Reset()
-            {
-                _current = null;
-                _indexLocation = null;
             }
         }
     }

@@ -39,9 +39,9 @@ namespace RestDB.Interfaces.FileLayer
         ulong GetFirstIndexPage(ushort objectType);
 
         /// <summary>
-        /// Allocates a new page in the page store and returns its page number
+        /// Allocates consecutive pages in the page store and returns the starting page number
         /// </summary>
-        ulong Allocate();
+        ulong Allocate(ushort pageCount = 1);
 
         /// <summary>
         /// Marks a page as available for reuse. This page

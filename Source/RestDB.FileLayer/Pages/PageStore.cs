@@ -97,7 +97,7 @@ namespace RestDB.FileLayer.Pages
             return "page store on " + _pageCache;
         }
 
-        ulong IPageStore.Allocate()
+        ulong IPageStore.Allocate(ushort pageCount)
         {
             return AllocatePageNumber();
         }

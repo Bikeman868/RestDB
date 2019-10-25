@@ -62,7 +62,10 @@ namespace RestDB.UnitTests.FileLayer
 
             _accessor.Clear(objectType, transaction);
             foreach (var s in strings)
-                _accessor.Append(objectType, transaction, Encoding.UTF8.GetBytes(s));
+            {
+                var buffer = Encoding.UTF8.GetBytes(s);
+                _accessor.Write(transaction, _accessor.Append(objectType, transaction, (uint)buffer.LongLength), buffer);
+            }
 
             _database.CommitTransaction(transaction);
             _pageStore.CommitTransaction(transaction);
@@ -118,7 +121,8 @@ namespace RestDB.UnitTests.FileLayer
             foreach (var s in strings)
             {
                 Assert.AreEqual(expectedCount++, _accessor.Enumerate(objectType, transaction).Count());
-                _accessor.Append(objectType, transaction, Encoding.UTF8.GetBytes(s));
+                var buffer = Encoding.UTF8.GetBytes(s);
+                _accessor.Write(transaction, _accessor.Append(objectType, transaction, (uint)buffer.LongLength), buffer);
             }
 
             _database.RollbackTransaction(transaction);
@@ -145,7 +149,10 @@ namespace RestDB.UnitTests.FileLayer
             _pageStore.BeginTransaction(transaction);
 
             foreach (var s in strings)
-                _accessor.Append(objectType, transaction, Encoding.UTF8.GetBytes(s));
+            {
+                var buffer = Encoding.UTF8.GetBytes(s);
+                _accessor.Write(transaction, _accessor.Append(objectType, transaction, (uint)buffer.LongLength), buffer);
+            }
 
             _accessor.LocateFirst(objectType, transaction, out object location);
             _accessor.Delete(objectType, transaction, location);
