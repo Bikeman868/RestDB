@@ -60,13 +60,13 @@ namespace RestDB.FileLayer.Accessors
             _pageSize = pageStore.PageSize;
         }
 
-        PageLocation ISequentialRecordAccessor.Append(ushort objectType, ITransaction transaction, ulong recordSize)
+        PageLocation ISequentialRecordAccessor.Append(ulong firstPageNumber, ITransaction transaction, ulong recordSize)
         {
             if (recordSize == 0) return null;
 
             // Find the last index page
 
-            var indexPageNumber = _pageStore.GetFirstIndexPage(objectType);
+            var indexPageNumber = firstPageNumber;
 
             while (true)
             {
@@ -148,11 +148,9 @@ namespace RestDB.FileLayer.Accessors
             };
         }
 
-        void ISequentialRecordAccessor.Clear(ushort objectType, ITransaction transaction)
+        void ISequentialRecordAccessor.Clear(ulong firstPageNumber, ITransaction transaction)
         {
-            var pageNumber = _pageStore.GetFirstIndexPage(objectType);
-
-            _pageStore.Lock(transaction, pageNumber);
+            _pageStore.Lock(transaction, firstPageNumber);
 
             // TODO: Release all of the pages in the page store
 
@@ -163,20 +161,23 @@ namespace RestDB.FileLayer.Accessors
                     new PageUpdate
                     {
                         SequenceNumber = 1,
-                        PageNumber = pageNumber,
+                        PageNumber = firstPageNumber,
                         Data = BitConverter.GetBytes(0UL)
                     },
                     new PageUpdate
                     {
                         SequenceNumber = 2,
-                        PageNumber = pageNumber,
+                        PageNumber = firstPageNumber,
                         Offset = 8U,
                         Data = IndexEntry0()
                     },
                 });
         }
 
-        void ISequentialRecordAccessor.Delete(ushort objectType, ITransaction transaction, object indexLocation)
+        void ISequentialRecordAccessor.Delete(
+            ulong firstPageNumber, 
+            ITransaction transaction, 
+            object indexLocation)
         {
             // TODO: Scan the index to see if there are pages containing only deleted records and release them in the page store
 
@@ -198,12 +199,15 @@ namespace RestDB.FileLayer.Accessors
                 });
         }
 
-        PageLocation ISequentialRecordAccessor.LocateFirst(ushort objectType, ITransaction transaction, out object indexLocation)
+        PageLocation ISequentialRecordAccessor.LocateFirst(
+            ulong firstPageNumber, 
+            ITransaction transaction, 
+            out object indexLocation)
         {
             var indexPageLocation = new PageLocation
             {
                 PageStore = _pageStore,
-                PageNumber = _pageStore.GetFirstIndexPage(objectType),
+                PageNumber = firstPageNumber,
                 Offset = 8U
             };
             indexLocation = indexPageLocation;
@@ -221,7 +225,7 @@ namespace RestDB.FileLayer.Accessors
                 if (indexPageLocation.Length == 0 || indexEntryType == 0) return null;
 
                 if (indexEntryType == 2) // First record was deleted
-                    return ((ISequentialRecordAccessor)this).LocateNext(objectType, transaction, indexLocation);
+                    return ((ISequentialRecordAccessor)this).LocateNext(firstPageNumber, transaction, indexLocation);
 
                 if (indexEntryType != 1) throw new FileLayerException(
                     "The large sequential record structure is corrupt, the index entry type for the first " +
@@ -236,7 +240,7 @@ namespace RestDB.FileLayer.Accessors
             return recordLocation;
         }
 
-        PageLocation ISequentialRecordAccessor.LocateNext(ushort objectType, ITransaction transaction, object indexLocation)
+        PageLocation ISequentialRecordAccessor.LocateNext(ulong firstPageNumber, ITransaction transaction, object indexLocation)
         {
             var indexPageLocation = (PageLocation)indexLocation;
             var indexEntryType = byte.MaxValue;
@@ -290,9 +294,9 @@ namespace RestDB.FileLayer.Accessors
             return recordLocation;
         }
 
-        IEnumerable<PageLocation> ISequentialRecordAccessor.Enumerate(ushort objectType, ITransaction transaction)
+        IEnumerable<PageLocation> ISequentialRecordAccessor.Enumerate(ulong firstPageNumber, ITransaction transaction)
         {
-            return new SequentialRecordEnumerator(this, objectType, transaction);
+            return new SequentialRecordEnumerator(this, firstPageNumber, transaction);
         }
 
         /// <summary>

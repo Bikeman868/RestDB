@@ -12,36 +12,34 @@ namespace RestDB.Interfaces.FileLayer
     public interface ISequentialRecordAccessor
     {
         /// <summary>
-        /// Returns an enumerator for a spcific type of object in the context of a transaction
+        /// Returns an enumerator for a sequential set of records starting at the 
+        /// specified page number in the context of a transaction
         /// </summary>
-        /// <param name="objectType"></param>
-        /// <param name="transaction"></param>
-        /// <returns></returns>
-        IEnumerable<PageLocation> Enumerate(ushort objectType, ITransaction transaction);
+        IEnumerable<PageLocation> Enumerate(ulong firstPageNumber, ITransaction transaction);
 
         /// <summary>
         /// Locates the first object in the list
         /// </summary>
-        /// <param name="objectType">See GetFirstIndexPage method of IPageStore</param>
+        /// <param name="firstPageNumber">The first page of the sequential records</param>
         /// <param name="transaction">The transaction context for reading the index</param>
         /// <param name="indexLocation">Returns the location of the first record in the index 
         /// of records</param>
         /// <returns>The location of the first record or null if the list is empty</returns>
         PageLocation LocateFirst(
-            ushort objectType, 
+            ulong firstPageNumber, 
             ITransaction transaction, 
             out object indexLocation);
 
         /// <summary>
         /// Locates the next object in the list
         /// </summary>
-        /// <param name="objectType">See GetFirstIndexPage method of IPageStore</param>
+        /// <param name="firstPageNumber">The first page of the sequential records</param>
         /// <param name="transaction">The transaction context for reading the index</param>
         /// <param name="indexLocation">The location of the current record in the index 
         /// of records</param>
         /// <returns>The location of the next record or null if this is the end of the list</returns>
         PageLocation LocateNext(
-            ushort objectType,
+            ulong firstPageNumber,
             ITransaction transaction,
             object indexLocation);
 
@@ -50,15 +48,17 @@ namespace RestDB.Interfaces.FileLayer
         /// enumerate the whole list and save it then clear the list, then append the
         /// records in the desired sequence
         /// </summary>
-        /// <param name="objectType">See GetFirstIndexPage method of IPageStore</param>
+        /// <param name="firstPageNumber">The first page of the sequential records</param>
         /// <param name="transaction">The transaction context for updating the index</param>
-        void Clear(ushort objectType, ITransaction transaction);
+        void Clear(
+            ulong firstPageNumber,
+            ITransaction transaction);
 
         /// <summary>
         /// Makes space for a record of the specififed size and returns information about 
         /// where to write the record data.
         /// </summary>
-        /// <param name="objectType">See GetFirstIndexPage method of IPageStore</param>
+        /// <param name="firstPageNumber">The first page of the sequential records</param>
         /// <param name="transaction">The transaction context for updating the index</param>
         /// <param name="recordSize">The number of bytes required to hold this records data</param>
         /// <returns>A data structure that says where to write the data for this record. If the
@@ -66,7 +66,7 @@ namespace RestDB.Interfaces.FileLayer
         /// filled starting at offset 0. The first page and the offset to start writing on that
         /// page are returned as properties of the returned object</returns>
         PageLocation Append(
-            ushort objectType,
+            ulong firstPageNumber,
             ITransaction transaction,
             ulong recordSize);
 
@@ -74,12 +74,12 @@ namespace RestDB.Interfaces.FileLayer
         /// Deletes a record from the list. To replace an existing record delete the
         /// current record and append a new one.
         /// </summary>
-        /// <param name="objectType">See GetFirstIndexPage method of IPageStore</param>
+        /// <param name="firstPageNumber">The first page of the sequential records</param>
         /// <param name="transaction">The transaction context for updating the index</param>
         /// <param name="indexLocation">The location of the record to delete in the 
         /// index of records</param>
         void Delete(
-            ushort objectType,
+            ulong firstPageNumber,
             ITransaction transaction,
             object indexLocation);
     }

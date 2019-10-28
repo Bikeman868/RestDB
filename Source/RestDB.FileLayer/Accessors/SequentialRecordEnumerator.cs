@@ -9,15 +9,15 @@ namespace RestDB.FileLayer.Accessors
     internal class SequentialRecordEnumerator: IEnumerable<PageLocation>, IEnumerator<PageLocation>
     {
         private ISequentialRecordAccessor _accessor;
-        private ushort _objectType;
+        private ulong _firstPageNumber;
         private ITransaction _transaction;
         private PageLocation _current;
         private object _indexLocation;
 
-        public SequentialRecordEnumerator(ISequentialRecordAccessor accessor, ushort objectType, ITransaction transaction)
+        public SequentialRecordEnumerator(ISequentialRecordAccessor accessor, ulong firstPageNumber, ITransaction transaction)
         {
             _accessor = accessor;
-            _objectType = objectType;
+            _firstPageNumber = firstPageNumber;
             _transaction = transaction;
         }
 
@@ -45,10 +45,10 @@ namespace RestDB.FileLayer.Accessors
             if (_current == null)
             {
                 if (_indexLocation != null) return false;
-                _current = _accessor.LocateFirst(_objectType, _transaction, out _indexLocation);
+                _current = _accessor.LocateFirst(_firstPageNumber, _transaction, out _indexLocation);
             }
             else
-                _current = _accessor.LocateNext(_objectType, _transaction, _indexLocation);
+                _current = _accessor.LocateNext(_firstPageNumber, _transaction, _indexLocation);
 
             return _current != null;
         }

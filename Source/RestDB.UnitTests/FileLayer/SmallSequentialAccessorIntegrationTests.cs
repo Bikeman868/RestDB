@@ -83,6 +83,7 @@ namespace RestDB.UnitTests.FileLayer
 
             var threads = new List<Thread>();
             var exceptions = new List<Exception>();
+            var firstPageNumber = _pageStore.GetFirstIndexPage(objectType);
 
             for (var i = 1; i <= threadCount; i++)
             {
@@ -95,7 +96,7 @@ namespace RestDB.UnitTests.FileLayer
                         _pageStore.BeginTransaction(writeTransaction);
 
                         var buffer = Encoding.UTF8.GetBytes("Transaction " + transactionNumber);
-                        var location = _accessor.Append(objectType, writeTransaction, (uint)buffer.LongLength);
+                        var location = _accessor.Append(firstPageNumber, writeTransaction, (uint)buffer.LongLength);
                         _accessor.Write(writeTransaction, location, buffer);
 
                         Thread.Sleep(50);
@@ -136,13 +137,13 @@ namespace RestDB.UnitTests.FileLayer
                 }
             };
 
-            var record = _accessor.LocateFirst(objectType, transaction, out object indexLocation);
+            var record = _accessor.LocateFirst(firstPageNumber, transaction, out object indexLocation);
             Assert.IsNotNull(record);
 
             for(var i = 1; i <= threadCount; i++)
             {
                 check(record);
-                record = _accessor.LocateNext(objectType, transaction, indexLocation);
+                record = _accessor.LocateNext(firstPageNumber, transaction, indexLocation);
             }
 
             for (var i = 1; i <= threadCount; i++)

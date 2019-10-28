@@ -57,11 +57,14 @@ namespace RestDB.UnitTests.FileLayer
             var transaction = _database.BeginTransaction(null);
             _pageStore.BeginTransaction(transaction);
 
-            _accessor.Clear(objectType, transaction);
+            var firstPageNumber = _pageStore.GetFirstIndexPage(objectType);
+
+            _accessor.Clear(firstPageNumber, transaction);
+
             foreach (var s in strings)
             {
                 var buffer = Encoding.UTF8.GetBytes(s);
-                var recordLocation = _accessor.Append(objectType, transaction, (uint)buffer.LongLength);
+                var recordLocation = _accessor.Append(firstPageNumber, transaction, (uint)buffer.LongLength);
                 _accessor.Write(transaction, recordLocation, buffer);
             }
 
@@ -82,13 +85,13 @@ namespace RestDB.UnitTests.FileLayer
                 Assert.AreEqual(expected, actual);
             };
 
-            var record = _accessor.LocateFirst(objectType, transaction, out object indexLocation);
+            var record = _accessor.LocateFirst(firstPageNumber, transaction, out object indexLocation);
             Assert.IsNotNull(record);
 
             foreach (var s in strings)
             {
                 check(record, s);
-                record = _accessor.LocateNext(objectType, transaction, indexLocation);
+                record = _accessor.LocateNext(firstPageNumber, transaction, indexLocation);
             }
 
             Assert.IsNull(record);
@@ -115,12 +118,14 @@ namespace RestDB.UnitTests.FileLayer
             var transaction = _database.BeginTransaction(null);
             _pageStore.BeginTransaction(transaction);
 
+            var firstPageNumber = _pageStore.GetFirstIndexPage(objectType);
+
             var expectedCount = 0;
             foreach (var s in strings)
             {
-                Assert.AreEqual(expectedCount++, _accessor.Enumerate(objectType, transaction).Count());
+                Assert.AreEqual(expectedCount++, _accessor.Enumerate(firstPageNumber, transaction).Count());
                 var buffer = Encoding.UTF8.GetBytes(s);
-                _accessor.Write(transaction, _accessor.Append(objectType, transaction, (uint)buffer.LongLength), buffer);
+                _accessor.Write(transaction, _accessor.Append(firstPageNumber, transaction, (uint)buffer.LongLength), buffer);
             }
 
             _database.RollbackTransaction(transaction);
@@ -145,25 +150,27 @@ namespace RestDB.UnitTests.FileLayer
             var transaction = _database.BeginTransaction(null);
             _pageStore.BeginTransaction(transaction);
 
+            var firstPageNumber = _pageStore.GetFirstIndexPage(objectType);
+
             foreach (var s in strings)
             {
                 var buffer = Encoding.UTF8.GetBytes(s);
-                _accessor.Write(transaction, _accessor.Append(objectType, transaction, (uint)buffer.LongLength), buffer);
+                _accessor.Write(transaction, _accessor.Append(firstPageNumber, transaction, (uint)buffer.LongLength), buffer);
             }
 
-            _accessor.LocateFirst(objectType, transaction, out object location);
-            _accessor.Delete(objectType, transaction, location);
+            _accessor.LocateFirst(firstPageNumber, transaction, out object location);
+            _accessor.Delete(firstPageNumber, transaction, location);
 
-            Assert.AreEqual(strings.Length - 1, _accessor.Enumerate(objectType, transaction).Count());
+            Assert.AreEqual(strings.Length - 1, _accessor.Enumerate(firstPageNumber, transaction).Count());
 
-            _accessor.LocateFirst(objectType, transaction, out location);
-            _accessor.LocateNext(objectType, transaction, location);
-            _accessor.Delete(objectType, transaction, location);
+            _accessor.LocateFirst(firstPageNumber, transaction, out location);
+            _accessor.LocateNext(firstPageNumber, transaction, location);
+            _accessor.Delete(firstPageNumber, transaction, location);
 
-            Assert.AreEqual(strings.Length - 2, _accessor.Enumerate(objectType, transaction).Count());
+            Assert.AreEqual(strings.Length - 2, _accessor.Enumerate(firstPageNumber, transaction).Count());
 
             var index = 1;
-            foreach(var record in _accessor.Enumerate(objectType, transaction))
+            foreach(var record in _accessor.Enumerate(firstPageNumber, transaction))
             {
                 var data = record.ReadAll(transaction, CacheHints.None);
                 var recordData = Encoding.UTF8.GetString(data);
