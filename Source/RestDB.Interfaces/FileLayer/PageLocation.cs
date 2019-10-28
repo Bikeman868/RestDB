@@ -4,7 +4,7 @@ using System;
 namespace RestDB.Interfaces.FileLayer
 {
     /// <summary>
-    /// POCO class for passing a location within pages storage
+    /// For passing a location within pages storage
     /// </summary>
     public class PageLocation
     {
@@ -37,35 +37,58 @@ namespace RestDB.Interfaces.FileLayer
         /// When the record is contained in a single page this property is null.
         /// </summary>
         public ulong[] ContunuationPages;
-    }
 
-    public static class PageLocationExtensions
-    {
         /// <summary>
-        /// Reads a record spanning multiple pages into a single byte array
+        /// Reads all of the bytes referenced by this location into a buffer and returns it
         /// </summary>
-        /// <param name="location">The location to read data from</param>
-        /// <param name="transaction">The transaction context for reading the pages</param>
-        public static byte[] ReadAll(
-            this PageLocation location,
+        public byte[] ReadAll(
             ITransaction transaction,
             CacheHints hints)
         {
-            var record = new byte[location.Length];
+            var record = new byte[Length];
+            ReadInto(transaction, hints, record);
+            return record;
+        }
 
-            if (location.ContunuationPages == null)
+        /// <summary>
+        /// Reads all of the bytes referenced by this location into the buffer supplied
+        /// </summary>
+        public void ReadInto(
+            ITransaction transaction,
+            CacheHints hints,
+            byte[] record)
+        {
+#if DEBUG
+            if ((ulong)record.LongLength != Length)
+                throw new FileLayerException("The buffer passed is the wrong length");
+#endif
+
+            if (ContunuationPages == null)
             {
-                using (var page = location.PageStore.Get(transaction, location.PageNumber, hints))
-                {
-                    Array.Copy(page.Data, location.Offset, record, 0, record.Length);
-                }
+                using (var page = PageStore.Get(transaction, PageNumber, hints))
+                    Array.Copy(page.Data, Offset, record, 0, record.Length);
             }
             else
             {
-                throw new NotImplementedException();
-            }
+                var recordOffset = 0UL;
+                var bytesToCopy = PageStore.PageSize - Offset;
 
-            return record;
+                using (var page = PageStore.Get(transaction, PageNumber, hints))
+                    Array.Copy(page.Data, Offset, record, (long)recordOffset, bytesToCopy);
+
+                foreach(var pageNumber in ContunuationPages)
+                {
+                    recordOffset += bytesToCopy;
+
+                    bytesToCopy = PageStore.PageSize;
+
+                    if (recordOffset + bytesToCopy > Length)
+                        bytesToCopy = (uint)(Length - recordOffset);
+
+                    using (var page = PageStore.Get(transaction, pageNumber, hints))
+                        Array.Copy(page.Data, 0, record, (long)recordOffset, bytesToCopy);
+                }
+            }
         }
     }
 }

@@ -74,8 +74,11 @@ namespace RestDB.UnitTests.FileLayer
 
             Action<PageLocation, string> check = (location, expected) =>
             {
+                Assert.IsNotNull(location);
+
                 var data = location.ReadAll(transaction, CacheHints.None);
                 var actual = Encoding.UTF8.GetString(data);
+
                 Assert.AreEqual(expected, actual);
             };
 
@@ -162,11 +165,11 @@ namespace RestDB.UnitTests.FileLayer
             var index = 1;
             foreach(var record in _accessor.Enumerate(objectType, transaction))
             {
-                using (var page = _pageStore.Get(transaction, record.PageNumber, CacheHints.None))
-                {
-                    var recordData = Encoding.UTF8.GetString(page.Data, (int)record.Offset, (int)record.Length);
-                    Assert.AreEqual(strings[index++], recordData);
-                }
+                var data = record.ReadAll(transaction, CacheHints.None);
+                var recordData = Encoding.UTF8.GetString(data);
+
+                Assert.AreEqual(strings[index++], recordData);
+
                 if (index == 2) index++;
             }
 

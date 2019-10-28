@@ -255,7 +255,12 @@ namespace RestDB.FileLayer.Accessors
                     if (indexEntryType == 4)
                     {
                         indexPageLocation.PageNumber = BitConverter.ToUInt64(indexPage.Data, 0);
-                        indexPageLocation.Offset = 0U;
+                        indexPageLocation.Offset = 8U;
+
+                        if (indexPageLocation.PageNumber == 0) return null;
+
+                        using (var nextIndexPage = _pageStore.Get(transaction, indexPageLocation.PageNumber, CacheHints.MetaData))
+                            indexEntryType = nextIndexPage.Data[indexPageLocation.Offset + 1];
                     }
                     else
                     {
