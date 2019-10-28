@@ -155,6 +155,9 @@ namespace RestDB.FileLayer.Accessors
             ushort objectType,
             ITransaction transaction)
         {
+            var pageNumber = _pageStore.GetFirstIndexPage(objectType);
+
+            _pageStore.Lock(transaction, pageNumber);
 
             // TODO: Release all of the pages in the page store
 

@@ -30,7 +30,7 @@ namespace RestDB.Interfaces.FileLayer
         /// 2     List of table definitions
         /// 3     List of index definitions
         /// 4     List of views/projections
-        /// 5     List of Stored procedures
+        /// 5     List of stored procedures
         /// 6     List of scheduled jobs
         /// 7-127 Reserved for later developments
         /// 128+  Application defined</param>
